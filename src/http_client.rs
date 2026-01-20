@@ -18,7 +18,7 @@ impl HTTPClient {
         Ok(HTTPClient { client })
     }
 
-    pub async fn get(&self, url: &str) -> Result<(String, String), Box<dyn Error>> {
+    pub async fn get_html(&self, url: &str) -> Result<(String, String), Box<dyn Error>> {
         let url = url.trim();
 
         let response = self.client
@@ -58,7 +58,29 @@ impl HTTPClient {
             .await
             .map_err(|err| format!("Could not read response text for {}: {}", url, err))?;
 
-
         Ok((final_url, response_text))
+    }
+
+    pub async fn get_sitemap(&self, url: &str) -> Result<String, Box<dyn Error>> {
+        let url = url.trim();
+
+        let response = self.client
+            .get(url)
+            .header("Accept", "application/xml, text/xml, */*")
+            .send()
+            .await?;
+
+        let content_type = response.headers()
+            .get("content-type")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("");
+
+        if !content_type.contains("xml") && !url.ends_with(".xml") {
+            return Err(format!("Document type is not XML for: {}", url).into());
+        }
+
+        let body = response.text().await?;
+
+        Ok(body)
     }
 }
