@@ -14,7 +14,7 @@ Palimp is a **Source Available** project.
 * **For Learners & Peers:** You are encouraged to inspect the code, study the architecture, and learn from the implementation.
 * **For Users:** Any functional use of the software, whether for personal or commercial purposes, requires the purchase of a valid license.
 
-This model allows me to keep the development transparent and the community informed while ensuring the project's sustainability. See the [LICENSE](LICENSE) file for the full legal text.
+This model allows me to keep the development transparent and the community informed while ensuring the project's sustainability. See the [LICENSE](LICENSE.md) file for the full legal text.
 
 ## Key Features (Current & Planned)
 
