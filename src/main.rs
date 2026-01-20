@@ -1,6 +1,8 @@
 use http_client::HTTPClient;
+use page::Page;
 
 mod http_client;
+mod page;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,12 +14,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Final URL: {}", final_url);
 
-    let dom = tl::parse(response_text.as_str(), tl::ParserOptions::default())
-        .map_err(|err| format!("Could not parse response text as HTML for {}:\n{}", url, err))?;
+    let page = Page::new(url, final_url.as_str(), response_text.as_str())
+        .map_err(|err| format!("Could not parse response text as HTML for {}, \n{}", url, err))?;
 
     let selector = "h2";
 
-    let results = dom.query_selector(selector);
+    let results = page.dom.query_selector(selector);
 
     match results {
         Some(res) => println!("Found {} elements for selector {}", res.count(), selector),
