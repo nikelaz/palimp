@@ -32,13 +32,3 @@ The planned architecture for Palimp is:
 * `palimp-core`: The engine. Handles HTTP logic, safety checks, archival.
 * `palimp-cli`: A terminal interface for running and monitoring crawls.
 * `palimp-gui`: A desktop dashboard for visual crawling.
-
-### How to use this
-
-1. Create a file named `README.md` in your project root.
-2. Paste the content above.
-3. Since you just set **Neovim** as your git editor, you can commit this with:
-`git add README.md`
-`git commit -m "docs: add initial README with project vision"`
-
-**Would you like me to help you write the `Cargo.toml` workspace file to actually link `palimp-core` and `palimp-cli` together?**
