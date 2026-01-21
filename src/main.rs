@@ -4,6 +4,7 @@ use sitemap::Sitemap;
 use std::error::Error;
 use database::Database;
 use site::Site;
+use crawl::Crawl;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use futures::stream::{self, StreamExt};
@@ -26,8 +27,8 @@ API Implementation
 [x] new query
 [x] list sites
 [x] delete site
-[ ] list crawls
-[ ] delete crawl
+[x] list crawls
+[x] delete crawl
 [ ] list queries
 [ ] delete query
 [ ] list results
@@ -49,6 +50,14 @@ pub async fn list_sites(db: &Database) -> Result<Vec<Site>, Box<dyn Error>> {
 
 pub async fn delete_site(site_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
     Site::delete(site_id, db)
+}
+
+pub async fn list_crawls(db: &Database) -> Result<Vec<Crawl>, Box<dyn Error>> {
+    Crawl::fetch_all(db)
+}
+
+pub async fn delete_crawl(crawl_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
+    Crawl::delete(crawl_id, db)
 }
 
 pub enum CrawlResult {
