@@ -25,12 +25,8 @@ impl<'a> Page<'a> {
     }
 
     pub fn sync(&self, database: &mut Database) -> Result<(), Box<dyn Error>> {
-        // We ensure there is a crawl_id before saving, otherwise it's an orphan
         let cid = self.crawl_id.ok_or("Cannot sync a page without a crawl_id")?;
 
-        // Pages are typically "Insert Only" for an archive—we don't usually update them.
-        // If you want to prevent duplicates in the same crawl, 
-        // you'd use ON CONFLICT(crawl_id, url) DO NOTHING.
         database.conn.execute(
             "INSERT INTO pages (crawl_id, url, final_url, html_content) VALUES (?1, ?2, ?3, ?4)",
             params![cid, self.url, self.final_url, self.html_content],

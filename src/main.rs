@@ -7,6 +7,8 @@ use site::Site;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use futures::stream::{self, StreamExt};
+use page_archive::PageArchive;
+use result_entry::ResultEntry;
 
 mod http_client;
 mod page;
@@ -89,6 +91,25 @@ async fn process_single_page(
     Ok(())
 }
 
+async fn query(crawl_id: i64, selector: &str, mut db: &mut Database) -> Result<Vec<ResultEntry>, Box<dyn Error>> {
+    let pages_archive = PageArchive::fetch_by_crawl_id(crawl_id, &db)?;
+
+    let mut all_results: Vec<ResultEntry> = Vec::new();
+
+    for archive in pages_archive {
+        if let Ok(page) = archive.to_page() {
+            if let Some(nodes) = page.dom.query_selector(selector) {
+                let count_u32 = nodes.count() as u32;
+                let mut result_entry = ResultEntry::new(None, archive.id, selector, count_u32);
+                let _ = result_entry.sync(&mut db);
+                all_results.push(result_entry);
+            }
+        }
+    }
+
+    Ok(all_results)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut db = Database::new("palimp.db")
@@ -97,7 +118,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _ = db.seed()
         .map_err(|err| format!("An error occured while seeding the database: {}", err))?;
 
-    let http_client = HTTPClient::new()?;
 
     /*
     let http_client = HTTPClient::new()?;
