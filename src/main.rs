@@ -19,6 +19,21 @@ mod site;
 mod database;
 mod result_entry;
 
+/*
+API Implementation
+[x] new site
+[x] new crawl
+[x] new query
+[x] list sites
+[x] delete site
+[ ] list crawls
+[ ] delete crawl
+[ ] list queries
+[ ] delete query
+[ ] list results
+[ ] delete result
+*/
+
 pub async fn new_site(domain: &str, sitemap_url: &str, mut db: &mut Database) -> Result<(), Box<dyn Error>> {
     let mut site = Site::new(None, domain, sitemap_url);
 
@@ -26,6 +41,14 @@ pub async fn new_site(domain: &str, sitemap_url: &str, mut db: &mut Database) ->
         .map_err(|err| format!("Could not create site in the database: {}", err))?;
 
     Ok(())
+}
+
+pub async fn list_sites(db: &Database) -> Result<Vec<Site>, Box<dyn Error>> {
+    Site::fetch_all(db)
+}
+
+pub async fn delete_site(site_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
+    Site::delete(site_id, db)
 }
 
 pub enum CrawlResult {
