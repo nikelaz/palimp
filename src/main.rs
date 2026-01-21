@@ -14,30 +14,61 @@ mod site;
 mod database;
 mod result_entry;
 
-async fn new_site(domain: &str, sitemap_url: &str, mut db: &mut Database) -> Result<(), Box<dyn Error>> {
+pub async fn new_site(domain: &str, sitemap_url: &str, mut db: &mut Database) -> Result<(), Box<dyn Error>> {
     let mut site = Site::new(None, domain, sitemap_url);
 
     site.sync(&mut db)
         .map_err(|err| format!("Could not create site in the database: {}", err))?;
 
-    /* this should be new_crawl()
-    let sitemap_content = http_client.get_sitemap(sitemap_url).await?;
+    Ok(())
+}
+
+pub enum CrawlResult {
+    PageSucceeded(String),
+    PageFailed(String, String),
+}
+
+pub async fn new_crawl<F>(
+    site_id: i64, 
+    db: &mut Database, 
+    http_client: &HTTPClient, 
+    on_update: F
+) -> Result<(), Box<dyn Error>> 
+where 
+    F: Fn(CrawlResult)
+{
+    let site = Site::fetch(site_id, &db)
+        .map_err(|err| format!("Could not fetch site with id: {} from the database:\n{}", site_id, err))?;
+
+    let sitemap_content = http_client.get_sitemap(site.sitemap_url.as_str())
+        .await
+        .map_err(|err| format!("Could not retrieve sitemap from {}:\n{}", site.sitemap_url, err))?;
 
     let sitemap = Sitemap::new(sitemap_content.as_str())
         .map_err(|err| format!("An error occured while parsing sitemap {}:\n{}", site.sitemap_url, err))?;
 
-    for url in sitemap.urlset.urls {
-        let url = url.loc;
+    for url_entry in sitemap.urlset.urls {
+        let url = url_entry.loc;
 
-        let (final_url, response_text) = http_client.get_html(url.as_str()).await?;
-
-        let page = Page::new(url.as_str(), final_url.as_str(), response_text.as_str(), None)
-            .map_err(|err| format!("Could not parse response text as HTML for {}, \n{}", url, err))?;
-
-        page.sync(&mut db)
-            .map_err(|err| format!("Could not create page in the database: {}", err))?;
+        match process_single_page(&url, db, http_client).await {
+            Ok(_) => on_update(CrawlResult::PageSucceeded(url)),
+            Err(e) => on_update(CrawlResult::PageFailed(url, e.to_string())),
+        }
     }
-    */
+
+    Ok(())
+}
+
+async fn process_single_page(url: &str, mut db: &mut Database, http_client: &HTTPClient) -> Result<(), Box<dyn Error>> {
+    let (final_url, response_text) = http_client.get_html(url)
+        .await
+        .map_err(|err| format!("Error while fetch HTML with HTTP request.\n{}", err))?;
+
+    let page = Page::new(url, final_url.as_str(), response_text.as_str(), None)
+        .map_err(|err| format!("Could not parse response text as HTML.\n{}", err))?;
+
+    page.sync(&mut db)
+        .map_err(|err| format!("Could not create page in the database.\n{}", err))?;
 
     Ok(())
 }
