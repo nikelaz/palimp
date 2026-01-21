@@ -25,6 +25,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         "crawls" => handle_crawls(&app, &args[2..]).await?,
         "queries" => handle_queries(&app, &args[2..]).await?,
         "results" => handle_results(&app, &args[2..]).await?,
+        "export" => handle_export(&app, &args[2..]).await?,
         _ => print_help(),
     }
 
@@ -228,58 +229,75 @@ async fn handle_results(app: &Application, args: &[String]) -> Result<(), Box<dy
         return Ok(());
     }
 
-    match args[0].as_str() {
-        "list" => {
-            if args.len() > 1 {
-                // User provided a query ID: results list <query_id>
-                let query_id = args[1].parse::<i64>()?;
-                let results = app.list_results_for_query(query_id).await?;
-                
-                if results.is_empty() {
-                    println!("No results found for query ID {}.", query_id);
-                } else {
-                    println!("{:<5} {:<60} {:<10}", "ID", "Page URL", "Count");
-                    println!("{:-<5} {:-<60} {:-<10}", "", "", "");
-                    for (res, url) in results {
-                        println!(
-                            "{:<5} {:<60} {:<10}",
-                            res.id.unwrap_or(0),
-                            url,
-                            res.count
-                        );
-                    }
-                }
-            } else {
-                // List all results
-                let results = app.list_results().await?;
-                if results.is_empty() {
-                    println!("No results found.");
-                } else {
-                    println!("{:<5} {:<10} {:<30} {:<10}", "ID", "Page ID", "Selector", "Count");
-                    println!("{:-<5} {:-<10} {:-<30} {:-<10}", "", "", "", "");
-                    for res in results {
-                        println!(
-                            "{:<5} {:<10} {:<30} {:<10}",
-                            res.id.unwrap_or(0),
-                            res.page_id,
-                            res.selector,
-                            res.count
-                        );
-                    }
-                }
-            }
+    // We expect the first argument to be the query_id
+    let query_id = match args[0].parse::<i64>() {
+        Ok(id) => id,
+        Err(_) => {
+            println!("Invalid Query ID. Please provide a numeric ID.");
+            print_help();
+            return Ok(());
         }
-        "delete" => {
-            if args.len() != 2 {
-                println!("Usage: results delete <id>");
-                return Ok(());
-            }
-            let id = args[1].parse::<i64>()?;
-            app.delete_result(id).await?;
-            println!("Result deleted successfully.");
+    };
+
+    let results = app.list_results_for_query(query_id).await?;
+
+    if results.is_empty() {
+        println!("No results found for query ID {}.", query_id);
+    } else {
+        println!("{:<5} {:<60} {:<10}", "ID", "Page URL", "Count");
+        println!("{:-<5} {:-<60} {:-<10}", "", "", "");
+        for (res, url) in results {
+            println!(
+                "{:<5} {:<60} {:<10}",
+                res.id.unwrap_or(0),
+                url,
+                res.count
+            );
         }
-        _ => print_help(),
     }
+
+    Ok(())
+}
+
+async fn handle_export(app: &Application, args: &[String]) -> Result<(), Box<dyn Error>> {
+    if args.len() != 2 {
+        println!("Usage: export <query_id> <csv_filename>");
+        return Ok(());
+    }
+
+    let query_id = match args[0].parse::<i64>() {
+        Ok(id) => id,
+        Err(_) => {
+            println!("Invalid Query ID. Please provide a numeric ID.");
+            return Ok(());
+        }
+    };
+    
+    let filename = &args[1];
+    
+    let results = app.list_results_for_query(query_id).await?;
+
+    if results.is_empty() {
+        println!("No results found for query ID {}. Nothing to export.", query_id);
+        return Ok(());
+    }
+
+    let mut wtr = csv::Writer::from_path(filename)?;
+    
+    // Write header
+    wtr.write_record(&["ID", "Page URL", "Count"])?;
+
+    for (res, url) in results {
+        wtr.write_record(&[
+            res.id.unwrap_or(0).to_string(),
+            url,
+            res.count.to_string(),
+        ])?;
+    }
+    
+    wtr.flush()?;
+    println!("Successfully exported results to '{}'.", filename);
+
     Ok(())
 }
 
@@ -298,6 +316,7 @@ fn print_help() {
     println!("  queries new <crawl_id> <selector>");
     println!("  queries delete <id>");
     println!();
-    println!("  results list [query_id]");
-    println!("  results delete <id>");
+    println!("  results <query_id>");
+    println!();
+    println!("  export <query_id> <csv_filename>");
 }
