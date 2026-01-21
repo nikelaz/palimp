@@ -1,10 +1,10 @@
-use std::error::Error;
 use crate::database::Database;
 use rusqlite::params;
+use std::error::Error;
 
 pub struct ResultEntry {
     pub id: Option<i64>,
-    pub page_id: i64, 
+    pub page_id: i64,
     pub selector: String,
     pub count: u32,
 }
@@ -51,5 +51,34 @@ impl ResultEntry {
         })?;
 
         Ok(entry)
+    }
+
+    pub fn fetch_all(database: &Database) -> Result<Vec<Self>, Box<dyn Error>> {
+        let mut stmt = database
+            .conn
+            .prepare("SELECT id, page_id, selector, count FROM results")?;
+
+        let entry_iter = stmt.query_map([], |row| {
+            Ok(ResultEntry {
+                id: Some(row.get(0)?),
+                page_id: row.get(1)?,
+                selector: row.get(2)?,
+                count: row.get(3)?,
+            })
+        })?;
+
+        let mut entries = Vec::new();
+        for entry in entry_iter {
+            entries.push(entry?);
+        }
+
+        Ok(entries)
+    }
+
+    pub fn delete(id: i64, database: &Database) -> Result<(), Box<dyn Error>> {
+        database
+            .conn
+            .execute("DELETE FROM results WHERE id = ?1", params![id])?;
+        Ok(())
     }
 }

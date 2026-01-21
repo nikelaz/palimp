@@ -5,6 +5,7 @@ use std::error::Error;
 use database::Database;
 use site::Site;
 use crawl::Crawl;
+use query::Query;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use futures::stream::{self, StreamExt};
@@ -19,21 +20,7 @@ mod crawl;
 mod site;
 mod database;
 mod result_entry;
-
-/*
-API Implementation
-[x] new site
-[x] new crawl
-[x] new query
-[x] list sites
-[x] delete site
-[x] list crawls
-[x] delete crawl
-[ ] list queries
-[ ] delete query
-[ ] list results
-[ ] delete result
-*/
+mod query;
 
 pub async fn new_site(domain: &str, sitemap_url: &str, mut db: &mut Database) -> Result<(), Box<dyn Error>> {
     let mut site = Site::new(None, domain, sitemap_url);
@@ -58,6 +45,22 @@ pub async fn list_crawls(db: &Database) -> Result<Vec<Crawl>, Box<dyn Error>> {
 
 pub async fn delete_crawl(crawl_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
     Crawl::delete(crawl_id, db)
+}
+
+pub async fn list_queries(db: &Database) -> Result<Vec<Query>, Box<dyn Error>> {
+    Query::fetch_all(db)
+}
+
+pub async fn delete_query(query_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
+    Query::delete(query_id, db)
+}
+
+pub async fn list_results(db: &Database) -> Result<Vec<ResultEntry>, Box<dyn Error>> {
+    ResultEntry::fetch_all(db)
+}
+
+pub async fn delete_result(result_id: i64, db: &Database) -> Result<(), Box<dyn Error>> {
+    ResultEntry::delete(result_id, db)
 }
 
 pub enum CrawlResult {

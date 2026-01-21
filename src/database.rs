@@ -1,5 +1,5 @@
-use std::error::Error;
 use rusqlite::{Connection, Result};
+use std::error::Error;
 
 pub struct Database {
     pub conn: Connection,
@@ -8,6 +8,9 @@ pub struct Database {
 impl Database {
     pub fn new(path: &str) -> Result<Database, Box<dyn Error>> {
         let conn = Connection::open(path)?;
+
+        // Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys = ON;", [])?;
 
         Ok(Database { conn: conn })
     }
@@ -40,6 +43,16 @@ impl Database {
                 final_url TEXT NOT NULL,
                 html_content TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (crawl_id) REFERENCES crawls (id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS queries (
+                id INTEGER PRIMARY KEY,
+                crawl_id INTEGER NOT NULL,
+                selector TEXT NOT NULL,
                 FOREIGN KEY (crawl_id) REFERENCES crawls (id) ON DELETE CASCADE
             )",
             [],
