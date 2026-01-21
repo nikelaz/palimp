@@ -23,7 +23,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     match args[1].as_str() {
         "sites" => handle_sites(&app, &args[2..]).await?,
         "crawls" => handle_crawls(&app, &args[2..]).await?,
-        "query" => handle_query(&app, &args[2..]).await?,
+        "queries" => handle_queries(&app, &args[2..]).await?,
         "results" => handle_results(&app, &args[2..]).await?,
         _ => print_help(),
     }
@@ -86,16 +86,28 @@ async fn handle_crawls(app: &Application, args: &[String]) -> Result<(), Box<dyn
     match args[0].as_str() {
         "list" => {
             let crawls = app.list_crawls().await?;
+            let sites = app.list_sites().await?;
+
+            let site_map: std::collections::HashMap<i64, String> = sites
+                .into_iter()
+                .filter_map(|s| s.id.map(|id| (id, s.domain)))
+                .collect();
+
             if crawls.is_empty() {
                 println!("No crawls found.");
             } else {
-                println!("{:<5} {:<10} {:<30}", "ID", "Site ID", "Started At");
-                println!("{:-<5} {:-<10} {:-<30}", "", "", "");
+                println!("{:<5} {:<40} {:<30}", "ID", "Site", "Started At");
+                println!("{:-<5} {:-<40} {:-<30}", "", "", "");
                 for crawl in crawls {
+                    let site_display = match site_map.get(&crawl.site_id) {
+                        Some(domain) => format!("{} (ID: {})", domain, crawl.site_id),
+                        None => format!("Unknown (ID: {})", crawl.site_id),
+                    };
+
                     println!(
-                        "{:<5} {:<10} {:<30}",
+                        "{:<5} {:<40} {:<30}",
                         crawl.id.unwrap_or(0),
-                        crawl.site_id,
+                        site_display,
                         crawl.started_at.as_deref().unwrap_or("Unknown")
                     );
                 }
@@ -138,19 +150,75 @@ async fn handle_crawls(app: &Application, args: &[String]) -> Result<(), Box<dyn
     Ok(())
 }
 
-async fn handle_query(app: &Application, args: &[String]) -> Result<(), Box<dyn Error>> {
-    if args.len() != 2 {
-        println!("Usage: query <crawl_id> <selector>");
+async fn handle_queries(app: &Application, args: &[String]) -> Result<(), Box<dyn Error>> {
+    if args.is_empty() {
+        print_help();
         return Ok(());
     }
 
-    let crawl_id = args[0].parse::<i64>()?;
-    let selector = &args[1];
+    match args[0].as_str() {
+        "list" => {
+            let queries = app.list_queries().await?;
+            let crawls = app.list_crawls().await?;
+            let sites = app.list_sites().await?;
 
-    println!("Running query '{}' on crawl {}...", selector, crawl_id);
-    let results = app.query(crawl_id, selector).await?;
-    println!("Query completed. Found {} matching results across pages.", results.len());
+            let site_map: std::collections::HashMap<i64, String> = sites
+                .into_iter()
+                .filter_map(|s| s.id.map(|id| (id, s.domain)))
+                .collect();
 
+            let crawl_map: std::collections::HashMap<i64, (i64, Option<String>)> = crawls
+                .into_iter()
+                .filter_map(|c| c.id.map(|id| (id, (c.site_id, c.started_at))))
+                .collect();
+
+            if queries.is_empty() {
+                println!("No queries found.");
+            } else {
+                println!("{:<5} {:<60} {:<30}", "ID", "Crawl", "Selector");
+                println!("{:-<5} {:-<60} {:-<30}", "", "", "");
+                for query in queries {
+                    let crawl_display = match crawl_map.get(&query.crawl_id) {
+                        Some((site_id, started_at)) => {
+                            let domain = site_map.get(site_id).map(|s| s.as_str()).unwrap_or("Unknown Site");
+                            let timestamp = started_at.as_deref().unwrap_or("Unknown Time");
+                            format!("{} (Crawl ID: {}) {}", domain, query.crawl_id, timestamp)
+                        }
+                        None => format!("Unknown Crawl (ID: {})", query.crawl_id),
+                    };
+
+                    println!(
+                        "{:<5} {:<60} {:<30}",
+                        query.id.unwrap_or(0),
+                        crawl_display,
+                        query.selector
+                    );
+                }
+            }
+        }
+        "new" => {
+            if args.len() != 3 {
+                println!("Usage: queries new <crawl_id> <selector>");
+                return Ok(());
+            }
+            let crawl_id = args[1].parse::<i64>()?;
+            let selector = &args[2];
+            
+            println!("Running query '{}' on crawl {}...", selector, crawl_id);
+            let results = app.query(crawl_id, selector).await?;
+            println!("Query completed. Found {} matching results across pages.", results.len());
+        }
+        "delete" => {
+            if args.len() != 2 {
+                println!("Usage: queries delete <id>");
+                return Ok(());
+            }
+            let id = args[1].parse::<i64>()?;
+            app.delete_query(id).await?;
+            println!("Query deleted successfully.");
+        }
+        _ => print_help(),
+    }
     Ok(())
 }
 
@@ -162,20 +230,42 @@ async fn handle_results(app: &Application, args: &[String]) -> Result<(), Box<dy
 
     match args[0].as_str() {
         "list" => {
-            let results = app.list_results().await?;
-            if results.is_empty() {
-                println!("No results found.");
+            if args.len() > 1 {
+                // User provided a query ID: results list <query_id>
+                let query_id = args[1].parse::<i64>()?;
+                let results = app.list_results_for_query(query_id).await?;
+                
+                if results.is_empty() {
+                    println!("No results found for query ID {}.", query_id);
+                } else {
+                    println!("{:<5} {:<60} {:<10}", "ID", "Page URL", "Count");
+                    println!("{:-<5} {:-<60} {:-<10}", "", "", "");
+                    for (res, url) in results {
+                        println!(
+                            "{:<5} {:<60} {:<10}",
+                            res.id.unwrap_or(0),
+                            url,
+                            res.count
+                        );
+                    }
+                }
             } else {
-                println!("{:<5} {:<10} {:<30} {:<10}", "ID", "Page ID", "Selector", "Count");
-                println!("{:-<5} {:-<10} {:-<30} {:-<10}", "", "", "", "");
-                for res in results {
-                    println!(
-                        "{:<5} {:<10} {:<30} {:<10}",
-                        res.id.unwrap_or(0),
-                        res.page_id,
-                        res.selector,
-                        res.count
-                    );
+                // List all results
+                let results = app.list_results().await?;
+                if results.is_empty() {
+                    println!("No results found.");
+                } else {
+                    println!("{:<5} {:<10} {:<30} {:<10}", "ID", "Page ID", "Selector", "Count");
+                    println!("{:-<5} {:-<10} {:-<30} {:-<10}", "", "", "", "");
+                    for res in results {
+                        println!(
+                            "{:<5} {:<10} {:<30} {:<10}",
+                            res.id.unwrap_or(0),
+                            res.page_id,
+                            res.selector,
+                            res.count
+                        );
+                    }
                 }
             }
         }
@@ -204,8 +294,10 @@ fn print_help() {
     println!("  crawls new <site_id> [max_concurrent]");
     println!("  crawls delete <id>");
     println!();
-    println!("  query <crawl_id> <selector>");
+    println!("  queries list");
+    println!("  queries new <crawl_id> <selector>");
+    println!("  queries delete <id>");
     println!();
-    println!("  results list");
+    println!("  results list [query_id]");
     println!("  results delete <id>");
 }

@@ -21,6 +21,7 @@ use tokio::sync::Mutex;
 use futures::stream::{self, StreamExt};
 use page_archive::PageArchive;
 use result_entry::ResultEntry;
+use rusqlite::params;
 
 pub struct Application {
     pub db: Arc<Mutex<Database>>,
@@ -78,6 +79,27 @@ impl Application {
         let db = self.db.lock().await;
         list_results(&db).await
     }
+    
+    pub async fn list_results_for_query(&self, query_id: i64) -> Result<Vec<(ResultEntry, String)>, Box<dyn Error>> {
+        let db = self.db.lock().await;
+        
+        let query = Query::fetch(query_id, &db)?;
+        
+        let results = ResultEntry::fetch_by_crawl_and_selector(query.crawl_id, &query.selector, &db)?;
+        
+        let mut enriched_results = Vec::new();
+        for res in results { 
+             let page_url: String = db.conn.query_row(
+                "SELECT url FROM pages WHERE id = ?1",
+                params![res.page_id],
+                |row| row.get(0)
+             )?;
+             
+             enriched_results.push((res, page_url));
+        }
+        
+        Ok(enriched_results)
+    }
 
     pub async fn delete_result(&self, result_id: i64) -> Result<(), Box<dyn Error>> {
         let db = self.db.lock().await;
@@ -93,6 +115,11 @@ impl Application {
 
     pub async fn query(&self, crawl_id: i64, selector: &str) -> Result<Vec<ResultEntry>, Box<dyn Error>> {
         let mut db = self.db.lock().await;
+        
+        // Save the query definition
+        let mut q = Query::new(None, crawl_id, selector);
+        q.sync(&mut db)?;
+
         query(crawl_id, selector, &mut db).await
     }
 }
@@ -232,4 +259,3 @@ async fn query(crawl_id: i64, selector: &str, mut db: &mut Database) -> Result<V
 
     Ok(all_results)
 }
-

@@ -75,6 +75,35 @@ impl ResultEntry {
         Ok(entries)
     }
 
+    pub fn fetch_by_crawl_and_selector(
+        crawl_id: i64,
+        selector: &str,
+        database: &Database,
+    ) -> Result<Vec<Self>, Box<dyn Error>> {
+        let mut stmt = database.conn.prepare(
+            "SELECT r.id, r.page_id, r.selector, r.count 
+             FROM results r 
+             INNER JOIN pages p ON r.page_id = p.id 
+             WHERE p.crawl_id = ?1 AND r.selector = ?2",
+        )?;
+
+        let entry_iter = stmt.query_map(params![crawl_id, selector], |row| {
+            Ok(ResultEntry {
+                id: Some(row.get(0)?),
+                page_id: row.get(1)?,
+                selector: row.get(2)?,
+                count: row.get(3)?,
+            })
+        })?;
+
+        let mut entries = Vec::new();
+        for entry in entry_iter {
+            entries.push(entry?);
+        }
+
+        Ok(entries)
+    }
+
     pub fn delete(id: i64, database: &Database) -> Result<(), Box<dyn Error>> {
         database
             .conn
