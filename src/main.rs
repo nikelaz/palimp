@@ -4,6 +4,9 @@ use sitemap::Sitemap;
 use std::error::Error;
 use database::Database;
 use site::Site;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use futures::stream::{self, StreamExt};
 
 mod http_client;
 mod page;
@@ -30,45 +33,58 @@ pub enum CrawlResult {
 
 pub async fn new_crawl<F>(
     site_id: i64, 
-    db: &mut Database, 
+    db: Arc<Mutex<Database>>,
     http_client: &HTTPClient, 
+    max_concurrent: usize,
     on_update: F
 ) -> Result<(), Box<dyn Error>> 
 where 
-    F: Fn(CrawlResult)
+    F: Fn(CrawlResult) + Send + Sync + 'static 
 {
-    let site = Site::fetch(site_id, &db)
-        .map_err(|err| format!("Could not fetch site with id: {} from the database:\n{}", site_id, err))?;
+    let site = {
+        let db_lock = db.lock().await;
+        Site::fetch(site_id, &*db_lock)
+            .map_err(|e| format!("DB Error: {}", e))?
+    };
 
-    let sitemap_content = http_client.get_sitemap(site.sitemap_url.as_str())
-        .await
-        .map_err(|err| format!("Could not retrieve sitemap from {}:\n{}", site.sitemap_url, err))?;
+    let sitemap_content = http_client.get_sitemap(site.sitemap_url.as_str()).await?;
+    let sitemap = Sitemap::new(sitemap_content.as_str())?;
 
-    let sitemap = Sitemap::new(sitemap_content.as_str())
-        .map_err(|err| format!("An error occured while parsing sitemap {}:\n{}", site.sitemap_url, err))?;
+    let on_update = Arc::new(on_update);
 
-    for url_entry in sitemap.urlset.urls {
-        let url = url_entry.loc;
+    stream::iter(sitemap.urlset.urls)
+        .for_each_concurrent(max_concurrent, |url_entry| {
+            let url = url_entry.loc;
+            let client = http_client.clone();
+            let db_clone = Arc::clone(&db);
+            let on_update_clone = Arc::clone(&on_update);
 
-        match process_single_page(&url, db, http_client).await {
-            Ok(_) => on_update(CrawlResult::PageSucceeded(url)),
-            Err(e) => on_update(CrawlResult::PageFailed(url, e.to_string())),
-        }
-    }
+            async move {
+                let result = process_single_page(&url, db_clone, &client).await;
+
+                match result {
+                    Ok(_) => on_update_clone(CrawlResult::PageSucceeded(url)),
+                    Err(e) => on_update_clone(CrawlResult::PageFailed(url, e.to_string())),
+                }
+            }
+        })
+    .await;
 
     Ok(())
 }
 
-async fn process_single_page(url: &str, mut db: &mut Database, http_client: &HTTPClient) -> Result<(), Box<dyn Error>> {
-    let (final_url, response_text) = http_client.get_html(url)
-        .await
-        .map_err(|err| format!("Error while fetch HTML with HTTP request.\n{}", err))?;
+async fn process_single_page(
+    url: &str, 
+    db: Arc<Mutex<Database>>, 
+    client: &HTTPClient
+) -> Result<(), Box<dyn Error>> {
+    let (final_url, html) = client.get_html(url).await?;
+    let page = Page::new(url, final_url.as_str(), html.as_str(), None)?;
 
-    let page = Page::new(url, final_url.as_str(), response_text.as_str(), None)
-        .map_err(|err| format!("Could not parse response text as HTML.\n{}", err))?;
-
-    page.sync(&mut db)
-        .map_err(|err| format!("Could not create page in the database.\n{}", err))?;
+    {
+        let mut db_lock = db.lock().await;
+        page.sync(&mut *db_lock)?;
+    }
 
     Ok(())
 }

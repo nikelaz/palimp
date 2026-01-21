@@ -2,6 +2,7 @@ use std::error::Error;
 
 const PAGE_SIZE_LIMIT_MB: u64 = 10;
 
+#[derive(Clone)]
 pub struct HTTPClient {
     client: reqwest::Client,
 }
