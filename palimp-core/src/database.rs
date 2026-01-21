@@ -69,8 +69,6 @@ impl Database {
             [],
         )?;
 
-        println!("Database schema initialized");
-
         Ok(())
     }
 }

@@ -163,6 +163,14 @@ where
     let sitemap_content = http_client.get_sitemap(site.sitemap_url.as_str()).await?;
     let sitemap = Sitemap::new(sitemap_content.as_str())?;
 
+    // Create and sync the crawl first to generate its ID
+    let crawl_id = {
+        let mut db_lock = db.lock().await;
+        let mut crawl = Crawl::new(None, site_id);
+        crawl.sync(&mut *db_lock)?;
+        crawl.id.ok_or("Failed to get crawl ID after sync")?
+    };
+
     let on_update = Arc::new(on_update);
 
     stream::iter(sitemap.urlset.urls)
@@ -171,9 +179,10 @@ where
             let client = http_client.clone();
             let db_clone = Arc::clone(&db);
             let on_update_clone = Arc::clone(&on_update);
+            let crawl_id = crawl_id; // Capture crawl_id for the async block
 
             async move {
-                let result = process_single_page(&url, db_clone, client).await;
+                let result = process_single_page(&url, crawl_id, db_clone, client).await;
 
                 match result {
                     Ok(_) => on_update_clone(CrawlResult::PageSucceeded(url)),
@@ -188,11 +197,12 @@ where
 
 async fn process_single_page(
     url: &str, 
+    crawl_id: i64,
     db: Arc<Mutex<Database>>, 
     client: HTTPClient
 ) -> Result<(), Box<dyn Error>> {
     let (final_url, html) = client.get_html(url).await?;
-    let page = Page::new(url, final_url.as_str(), html.as_str(), None)?;
+    let page = Page::new(url, final_url.as_str(), html.as_str(), Some(crawl_id))?;
 
     {
         let mut db_lock = db.lock().await;
@@ -211,9 +221,11 @@ async fn query(crawl_id: i64, selector: &str, mut db: &mut Database) -> Result<V
         if let Ok(page) = archive.to_page() {
             if let Some(nodes) = page.dom.query_selector(selector) {
                 let count_u32 = nodes.count() as u32;
-                let mut result_entry = ResultEntry::new(None, archive.id, selector, count_u32);
-                let _ = result_entry.sync(&mut db);
-                all_results.push(result_entry);
+                if count_u32 > 0 {
+                    let mut result_entry = ResultEntry::new(None, archive.id, selector, count_u32);
+                    let _ = result_entry.sync(&mut db);
+                    all_results.push(result_entry);
+                }
             }
         }
     }

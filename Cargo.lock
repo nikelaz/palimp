@@ -732,6 +732,7 @@ name = "palimp-cli"
 version = "0.1.0"
 dependencies = [
  "palimp-core",
+ "tokio",
 ]
 
 [[package]]
