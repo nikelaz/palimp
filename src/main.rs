@@ -60,7 +60,7 @@ where
             let on_update_clone = Arc::clone(&on_update);
 
             async move {
-                let result = process_single_page(&url, db_clone, &client).await;
+                let result = process_single_page(&url, db_clone, client).await;
 
                 match result {
                     Ok(_) => on_update_clone(CrawlResult::PageSucceeded(url)),
@@ -76,7 +76,7 @@ where
 async fn process_single_page(
     url: &str, 
     db: Arc<Mutex<Database>>, 
-    client: &HTTPClient
+    client: HTTPClient
 ) -> Result<(), Box<dyn Error>> {
     let (final_url, html) = client.get_html(url).await?;
     let page = Page::new(url, final_url.as_str(), html.as_str(), None)?;
