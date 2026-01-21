@@ -1,0 +1,202 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, StandardTableView, TabWidget } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "Palimp GUI";
+    width: 800px;
+    height: 600px;
+
+    // Data Models - Now using standard table items
+    in property <[[StandardListViewItem]]> sites;
+    in property <[[StandardListViewItem]]> crawls;
+    in property <[[StandardListViewItem]]> queries;
+    in property <[[StandardListViewItem]]> results;
+
+    // Callbacks
+    callback request_add_site(string, string);
+    callback request_delete_site(string); // using string ID for easier parsing
+    
+    callback request_start_crawl(string, string); // site_id, max_concurrent
+    callback request_delete_crawl(string);
+
+    callback request_add_query(string, string); // crawl_id, selector
+    callback request_delete_query(string);
+
+    callback request_load_results(string); // query_id
+
+    TabWidget {
+        Tab {
+            title: "Sites";
+            VerticalBox {
+                HorizontalBox {
+                    height: 40px;
+                    new_domain := LineEdit {
+                        placeholder-text: "Domain (e.g., example.com)";
+                        width: 200px;
+                    }
+                    new_sitemap := LineEdit {
+                        placeholder-text: "Sitemap URL (e.g., https://example.com/sitemap.xml)";
+                        width: 300px;
+                    }
+                    Button {
+                        text: "Add Site";
+                        clicked => {
+                            root.request_add_site(new_domain.text, new_sitemap.text);
+                            new_domain.text = "";
+                            new_sitemap.text = "";
+                        }
+                    }
+                }
+                
+                StandardTableView {
+                    columns: [
+                        { title: "ID", width: 50px },
+                        { title: "Domain", width: 200px },
+                        { title: "Sitemap URL" },
+                    ];
+                    rows: root.sites;
+                }
+
+                HorizontalBox {
+                    height: 40px;
+                    site_id_del := LineEdit {
+                        placeholder-text: "Site ID to Delete";
+                        width: 150px;
+                    }
+                    Button {
+                        text: "Delete Site";
+                        clicked => {
+                            root.request_delete_site(site_id_del.text);
+                            site_id_del.text = "";
+                        }
+                    }
+                }
+            }
+        }
+
+        Tab {
+            title: "Crawls";
+            VerticalBox {
+                HorizontalBox {
+                    height: 40px;
+                    crawl_site_id := LineEdit {
+                        placeholder-text: "Site ID";
+                        width: 100px;
+                    }
+                    crawl_concurrency := LineEdit {
+                        placeholder-text: "Concurrency (default 5)";
+                        text: "5";
+                        width: 150px;
+                    }
+                    Button {
+                        text: "Start New Crawl";
+                        clicked => {
+                            root.request_start_crawl(crawl_site_id.text, crawl_concurrency.text);
+                            crawl_site_id.text = "";
+                        }
+                    }
+                }
+
+                StandardTableView {
+                    columns: [
+                        { title: "ID", width: 50px },
+                        { title: "Site", width: 250px },
+                        { title: "Started At" },
+                    ];
+                    rows: root.crawls;
+                }
+
+                HorizontalBox {
+                    height: 40px;
+                    crawl_id_del := LineEdit {
+                        placeholder-text: "Crawl ID to Delete";
+                        width: 150px;
+                    }
+                    Button {
+                        text: "Delete Crawl";
+                        clicked => {
+                            root.request_delete_crawl(crawl_id_del.text);
+                            crawl_id_del.text = "";
+                        }
+                    }
+                }
+            }
+        }
+
+        Tab {
+            title: "Queries";
+            VerticalBox {
+                HorizontalBox {
+                    height: 40px;
+                    query_crawl_id := LineEdit {
+                        placeholder-text: "Crawl ID";
+                        width: 100px;
+                    }
+                    query_selector := LineEdit {
+                        placeholder-text: "CSS Selector (e.g., div.content a)";
+                        width: 300px;
+                    }
+                    Button {
+                        text: "Run Query";
+                        clicked => {
+                            root.request_add_query(query_crawl_id.text, query_selector.text);
+                            query_crawl_id.text = "";
+                            query_selector.text = "";
+                        }
+                    }
+                }
+
+                StandardTableView {
+                    columns: [
+                        { title: "ID", width: 50px },
+                        { title: "Crawl", width: 250px },
+                        { title: "Selector" },
+                    ];
+                    rows: root.queries;
+                }
+
+                HorizontalBox {
+                    height: 40px;
+                    query_id_del := LineEdit {
+                        placeholder-text: "Query ID to Delete";
+                        width: 150px;
+                    }
+                    Button {
+                        text: "Delete Query";
+                        clicked => {
+                            root.request_delete_query(query_id_del.text);
+                            query_id_del.text = "";
+                        }
+                    }
+                }
+            }
+        }
+
+        Tab {
+            title: "Results";
+            VerticalBox {
+                HorizontalBox {
+                    height: 40px;
+                    results_query_id := LineEdit {
+                        placeholder-text: "Query ID to Load";
+                        width: 150px;
+                    }
+                    Button {
+                        text: "Load Results";
+                        clicked => {
+                            root.request_load_results(results_query_id.text);
+                        }
+                    }
+                }
+
+                StandardTableView {
+                    columns: [
+                        { title: "ID", width: 50px },
+                        { title: "Page URL" },
+                        { title: "Count", width: 80px },
+                    ];
+                    rows: root.results;
+                }
+            }
+        }
+    }
+}
