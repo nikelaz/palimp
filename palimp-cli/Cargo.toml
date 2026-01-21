@@ -1,0 +1,7 @@
+[package]
+name = "palimp-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+palimp-core = { version = "0.1.0", path = "../palimp-core" }

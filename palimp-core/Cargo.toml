@@ -1,0 +1,13 @@
+[package]
+name = "palimp-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+quick-xml = { version = "0.39.0", features = ["serialize"] }
+reqwest = "0.13.1"
+serde = { version = "1.0.228", features = ["derive"] }
+tl = "0.7.8"
+tokio = { version = "1", features = ["full"] }
+rusqlite = { version = "0.38.0", features = ["bundled"] }
+futures = "0.3.31"
