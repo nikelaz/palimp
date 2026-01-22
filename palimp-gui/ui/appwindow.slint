@@ -1,4 +1,11 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, StandardTableView, StandardListView } from "std-widgets.slint";
+import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    LineEdit,
+    StandardTableView,
+    StandardListView,
+} from "std-widgets.slint";
 
 export component AppWindow inherits Window {
     title: "Palimp GUI";
@@ -30,12 +37,7 @@ export component AppWindow inherits Window {
         // Left Sidebar Navigation
         StandardListView {
             width: 150px;
-            model: [
-                { text: "Sites" },
-                { text: "Crawls" },
-                { text: "Queries" },
-                { text: "Results" }
-            ];
+            model: [{ text: "Sites" }, { text: "Crawls" }, { text: "Queries" }, { text: "Results" }];
             current-item <=> root.current_section;
         }
 
@@ -46,17 +48,18 @@ export component AppWindow inherits Window {
             // Sites Section
             if current_section == 0: VerticalBox {
                 property <int> right_clicked_site_row: -1;
-                
                 HorizontalBox {
                     height: 40px;
                     new_domain := LineEdit {
                         placeholder-text: "Domain (e.g., example.com)";
                         width: 200px;
                     }
+
                     new_sitemap := LineEdit {
                         placeholder-text: "Sitemap URL (e.g., https://example.com/sitemap.xml)";
                         width: 300px;
                     }
+
                     Button {
                         text: "Add Site";
                         clicked => {
@@ -66,32 +69,33 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                
-                site_context := ContextMenuArea {
-                    
-                    
-                    
+
+                sites_context_menu := ContextMenuArea {
                     StandardTableView {
+                        width: 100%;
+                        height: 100%;
                         columns: [
                             { title: "ID", width: 50px },
                             { title: "Domain", width: 200px },
                             { title: "Sitemap URL" },
                         ];
                         rows: root.sites;
-                        
                         row-pointer-event(row-index, event, point) => {
-                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                            if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
+                                sites_context_menu.close();
                                 right_clicked_site_row = row-index;
-                                site_context.show(point);
+                            }
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                sites_context_menu.show(point);
                             }
                         }
                     }
-                    
+
                     Menu {
                         MenuItem {
                             title: "Delete Site";
                             activated => {
-                                if (right_clicked_site_row >= 0 && right_clicked_site_row < root.sites.length) {
+                                if (right_clicked_site_row >= 0 && right_clicked_site_row < root.crawls.length) {
                                     root.request_delete_site(root.sites[right_clicked_site_row][0].text);
                                 }
                             }
@@ -103,18 +107,19 @@ export component AppWindow inherits Window {
             // Crawls Section
             if current_section == 1: VerticalBox {
                 property <int> right_clicked_crawl_row: -1;
-                
                 HorizontalBox {
                     height: 40px;
                     crawl_site_id := LineEdit {
                         placeholder-text: "Site ID";
                         width: 100px;
                     }
+
                     crawl_concurrency := LineEdit {
                         placeholder-text: "Concurrency (default 5)";
                         text: "5";
                         width: 150px;
                     }
+
                     Button {
                         text: "Start New Crawl";
                         clicked => {
@@ -124,26 +129,27 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                crawl_context := ContextMenuArea {
-                    
-                    
-                    
+                crawl_context_menu := ContextMenuArea {
                     StandardTableView {
+                        width: 100%;
+                        height: 100%;
                         columns: [
                             { title: "ID", width: 50px },
                             { title: "Site", width: 250px },
                             { title: "Started At" },
                         ];
                         rows: root.crawls;
-                        
                         row-pointer-event(row-index, event, point) => {
-                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                            if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
+                                crawl_context_menu.close();
                                 right_clicked_crawl_row = row-index;
-                                crawl_context.show(point);
+                            }
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                crawl_context_menu.show(point);
                             }
                         }
                     }
-                    
+
                     Menu {
                         MenuItem {
                             title: "Delete Crawl";
@@ -160,17 +166,18 @@ export component AppWindow inherits Window {
             // Queries Section
             if current_section == 2: VerticalBox {
                 property <int> right_clicked_query_row: -1;
-                
                 HorizontalBox {
                     height: 40px;
                     query_crawl_id := LineEdit {
                         placeholder-text: "Crawl ID";
                         width: 100px;
                     }
+
                     query_selector := LineEdit {
                         placeholder-text: "CSS Selector (e.g., div.content a)";
                         width: 300px;
                     }
+
                     Button {
                         text: "Run Query";
                         clicked => {
@@ -181,26 +188,27 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                query_context := ContextMenuArea {
-                    
-                    
-                    
+                query_context_menu := ContextMenuArea {
                     StandardTableView {
+                        width: 100%;
+                        height: 100%;
                         columns: [
                             { title: "ID", width: 50px },
                             { title: "Crawl", width: 250px },
                             { title: "Selector" },
                         ];
                         rows: root.queries;
-                        
                         row-pointer-event(row-index, event, point) => {
-                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                            if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
+                                query_context_menu.close();
                                 right_clicked_query_row = row-index;
-                                query_context.show(point);
+                            }
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                query_context_menu.show(point);
                             }
                         }
                     }
-                    
+
                     Menu {
                         MenuItem {
                             title: "Delete Query";
@@ -222,6 +230,7 @@ export component AppWindow inherits Window {
                         placeholder-text: "Query ID to Load";
                         width: 150px;
                     }
+
                     Button {
                         text: "Load Results";
                         clicked => {
