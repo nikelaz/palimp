@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, StandardTableView, TabWidget } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, StandardTableView, StandardListView } from "std-widgets.slint";
 
 export component AppWindow inherits Window {
     title: "Palimp GUI";
@@ -23,10 +23,30 @@ export component AppWindow inherits Window {
 
     callback request_load_results(string); // query_id
 
-    TabWidget {
-        Tab {
-            title: "Sites";
-            VerticalBox {
+    // Current active section (0 = Sites, 1 = Crawls, 2 = Queries, 3 = Results)
+    property <int> current_section: 0;
+
+    HorizontalBox {
+        // Left Sidebar Navigation
+        StandardListView {
+            width: 150px;
+            model: [
+                { text: "Sites" },
+                { text: "Crawls" },
+                { text: "Queries" },
+                { text: "Results" }
+            ];
+            current-item <=> root.current_section;
+        }
+
+        // Main Content Area
+        VerticalBox {
+            padding: 20px;
+            
+            // Sites Section
+            if current_section == 0: VerticalBox {
+                property <int> right_clicked_site_row: -1;
+                
                 HorizontalBox {
                     height: 40px;
                     new_domain := LineEdit {
@@ -47,35 +67,43 @@ export component AppWindow inherits Window {
                     }
                 }
                 
-                StandardTableView {
-                    columns: [
-                        { title: "ID", width: 50px },
-                        { title: "Domain", width: 200px },
-                        { title: "Sitemap URL" },
-                    ];
-                    rows: root.sites;
-                }
-
-                HorizontalBox {
-                    height: 40px;
-                    site_id_del := LineEdit {
-                        placeholder-text: "Site ID to Delete";
-                        width: 150px;
+                site_context := ContextMenuArea {
+                    
+                    
+                    
+                    StandardTableView {
+                        columns: [
+                            { title: "ID", width: 50px },
+                            { title: "Domain", width: 200px },
+                            { title: "Sitemap URL" },
+                        ];
+                        rows: root.sites;
+                        
+                        row-pointer-event(row-index, event, point) => {
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                right_clicked_site_row = row-index;
+                                site_context.show(point);
+                            }
+                        }
                     }
-                    Button {
-                        text: "Delete Site";
-                        clicked => {
-                            root.request_delete_site(site_id_del.text);
-                            site_id_del.text = "";
+                    
+                    Menu {
+                        MenuItem {
+                            title: "Delete Site";
+                            activated => {
+                                if (right_clicked_site_row >= 0 && right_clicked_site_row < root.sites.length) {
+                                    root.request_delete_site(root.sites[right_clicked_site_row][0].text);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Tab {
-            title: "Crawls";
-            VerticalBox {
+            // Crawls Section
+            if current_section == 1: VerticalBox {
+                property <int> right_clicked_crawl_row: -1;
+                
                 HorizontalBox {
                     height: 40px;
                     crawl_site_id := LineEdit {
@@ -96,35 +124,43 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                StandardTableView {
-                    columns: [
-                        { title: "ID", width: 50px },
-                        { title: "Site", width: 250px },
-                        { title: "Started At" },
-                    ];
-                    rows: root.crawls;
-                }
-
-                HorizontalBox {
-                    height: 40px;
-                    crawl_id_del := LineEdit {
-                        placeholder-text: "Crawl ID to Delete";
-                        width: 150px;
+                crawl_context := ContextMenuArea {
+                    
+                    
+                    
+                    StandardTableView {
+                        columns: [
+                            { title: "ID", width: 50px },
+                            { title: "Site", width: 250px },
+                            { title: "Started At" },
+                        ];
+                        rows: root.crawls;
+                        
+                        row-pointer-event(row-index, event, point) => {
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                right_clicked_crawl_row = row-index;
+                                crawl_context.show(point);
+                            }
+                        }
                     }
-                    Button {
-                        text: "Delete Crawl";
-                        clicked => {
-                            root.request_delete_crawl(crawl_id_del.text);
-                            crawl_id_del.text = "";
+                    
+                    Menu {
+                        MenuItem {
+                            title: "Delete Crawl";
+                            activated => {
+                                if (right_clicked_crawl_row >= 0 && right_clicked_crawl_row < root.crawls.length) {
+                                    root.request_delete_crawl(root.crawls[right_clicked_crawl_row][0].text);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Tab {
-            title: "Queries";
-            VerticalBox {
+            // Queries Section
+            if current_section == 2: VerticalBox {
+                property <int> right_clicked_query_row: -1;
+                
                 HorizontalBox {
                     height: 40px;
                     query_crawl_id := LineEdit {
@@ -145,35 +181,41 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                StandardTableView {
-                    columns: [
-                        { title: "ID", width: 50px },
-                        { title: "Crawl", width: 250px },
-                        { title: "Selector" },
-                    ];
-                    rows: root.queries;
-                }
-
-                HorizontalBox {
-                    height: 40px;
-                    query_id_del := LineEdit {
-                        placeholder-text: "Query ID to Delete";
-                        width: 150px;
+                query_context := ContextMenuArea {
+                    
+                    
+                    
+                    StandardTableView {
+                        columns: [
+                            { title: "ID", width: 50px },
+                            { title: "Crawl", width: 250px },
+                            { title: "Selector" },
+                        ];
+                        rows: root.queries;
+                        
+                        row-pointer-event(row-index, event, point) => {
+                            if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                                right_clicked_query_row = row-index;
+                                query_context.show(point);
+                            }
+                        }
                     }
-                    Button {
-                        text: "Delete Query";
-                        clicked => {
-                            root.request_delete_query(query_id_del.text);
-                            query_id_del.text = "";
+                    
+                    Menu {
+                        MenuItem {
+                            title: "Delete Query";
+                            activated => {
+                                if (right_clicked_query_row >= 0 && right_clicked_query_row < root.queries.length) {
+                                    root.request_delete_query(root.queries[right_clicked_query_row][0].text);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Tab {
-            title: "Results";
-            VerticalBox {
+            // Results Section
+            if current_section == 3: VerticalBox {
                 HorizontalBox {
                     height: 40px;
                     results_query_id := LineEdit {
