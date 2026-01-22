@@ -1,0 +1,71 @@
+import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    LineEdit,
+    StandardTableView
+} from "std-widgets.slint";
+
+export component SitesPage inherits VerticalBox {
+    in property <[[StandardListViewItem]]> sites;
+    callback request_add_site(string, string);
+    callback request_delete_site(string);
+
+    property <int> right_clicked_site_row: -1;
+    
+    HorizontalBox {
+        height: 40px;
+        new_domain := LineEdit {
+            placeholder-text: "Domain (e.g., example.com)";
+            width: 200px;
+        }
+
+        new_sitemap := LineEdit {
+            placeholder-text: "Sitemap URL (e.g., https://example.com/sitemap.xml)";
+            width: 300px;
+        }
+
+        Button {
+            text: "Add Site";
+            clicked => {
+                root.request_add_site(new_domain.text, new_sitemap.text);
+                new_domain.text = "";
+                new_sitemap.text = "";
+            }
+        }
+    }
+
+    sites_context_menu := ContextMenuArea {
+        StandardTableView {
+            width: 100%;
+            height: 100%;
+            columns: [
+                { title: "ID", width: 50px },
+                { title: "Domain", width: 200px },
+                { title: "Sitemap URL" },
+            ];
+            rows: root.sites;
+            row-pointer-event(row-index, event, point) => {
+                if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
+                    sites_context_menu.close();
+                    right_clicked_site_row = row-index;
+                }
+                if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                    sites_context_menu.show(point);
+                }
+            }
+        }
+
+        Menu {
+            MenuItem {
+                title: "Delete Site";
+                activated => {
+                    // Fixed bug: checking root.sites.length instead of root.crawls.length
+                    if (right_clicked_site_row >= 0 && right_clicked_site_row < root.sites.length) {
+                        root.request_delete_site(root.sites[right_clicked_site_row][0].text);
+                    }
+                }
+            }
+        }
+    }
+}

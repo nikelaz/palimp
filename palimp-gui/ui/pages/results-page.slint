@@ -1,0 +1,36 @@
+import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    LineEdit,
+    StandardTableView
+} from "std-widgets.slint";
+
+export component ResultsPage inherits VerticalBox {
+    in property <[[StandardListViewItem]]> results;
+    callback request_load_results(string);
+
+    HorizontalBox {
+        height: 40px;
+        results_query_id := LineEdit {
+            placeholder-text: "Query ID to Load";
+            width: 150px;
+        }
+
+        Button {
+            text: "Load Results";
+            clicked => {
+                root.request_load_results(results_query_id.text);
+            }
+        }
+    }
+
+    StandardTableView {
+        columns: [
+            { title: "ID", width: 50px },
+            { title: "Page URL" },
+            { title: "Count", width: 80px },
+        ];
+        rows: root.results;
+    }
+}
