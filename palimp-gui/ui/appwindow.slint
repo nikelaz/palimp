@@ -8,11 +8,11 @@ export { AddSiteDialog, AddCrawlDialog }
 
 export component AppWindow inherits Window {
     title: "Palimp GUI";
-    min-width: 1000px;
-    min-height: 700px;
+    min-width: 960px;
+    min-height: 540px;
 
     // Data properties
-    in property <[StandardListViewItem]> sites;  // Changed to 1D array
+    in property <[StandardListViewItem]> sites;
     in property <[[StandardListViewItem]]> crawls;
     in property <[[StandardListViewItem]]> results;
 
@@ -32,6 +32,7 @@ export component AppWindow inherits Window {
     callback crawl-selected(string);  // Notify Rust of crawl selection for caching
 
     HorizontalBox {
+        padding: 0;
         // Left: Sites Sidebar
         sites-sidebar := SitesSidebar {
             sites: root.sites;
@@ -41,7 +42,7 @@ export component AppWindow inherits Window {
             }
             site-selected(index) => {
                 root.site-selected(index);  // Tell Rust to load crawls
-            }
+              }
         }
 
         // Right: Main Content Area

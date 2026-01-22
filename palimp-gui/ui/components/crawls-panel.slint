@@ -1,33 +1,48 @@
-import { VerticalBox, HorizontalBox, Button, StandardTableView } from "std-widgets.slint";
+import {
+    VerticalBox,
+    HorizontalBox,
+    Button,
+    StandardTableView,
+} from "std-widgets.slint";
 
 export component CrawlsPanel inherits Rectangle {
     in property <[[StandardListViewItem]]> crawls;
     in-out property <int> selected-crawl-row: -1;
-    
     callback add-crawl-clicked();
-    callback delete-crawl-clicked(string);  // crawl_id
-    callback crawl-selected(string);  // crawl_id
-    
+    callback delete-crawl-clicked(string);
+    callback crawl-selected(string);
+
     VerticalBox {
-        padding: 10px;
-        spacing: 10px;
-        
+        padding: 12px;
+        spacing: 12px;
+        alignment: start;
+
         HorizontalBox {
-            height: 40px;
+            padding: 0;
+            spacing: 12px;
+            alignment: space-between;
+            min-height: 36px;
+
+            Text {
+                text: "Crawls";
+                font-size: 16px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+
             Button {
-                text: "+ Add Crawl";
-                clicked => { root.add-crawl-clicked(); }
+                text: "New Crawl";
+                clicked => {
+                    root.add-crawl-clicked();
+                }
             }
         }
-        
+
         crawl-context-menu := ContextMenuArea {
             StandardTableView {
-                columns: [
-                    { title: "ID", width: 80px },
-                    { title: "Started At", width: 200px }
-                ];
+                width: 100%;
+                columns: [{ title: "ID", width: 80px }, { title: "Date" }];
                 rows: root.crawls;
-                
                 row-pointer-event(row-index, event, point) => {
                     if (event.kind == PointerEventKind.down && event.button == PointerEventButton.left) {
                         root.selected-crawl-row = row-index;
@@ -35,7 +50,6 @@ export component CrawlsPanel inherits Rectangle {
                             root.crawl-selected(crawls[row-index][0].text);
                         }
                     }
-                    
                     if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
                         crawl-context-menu.close();
                         root.selected-crawl-row = row-index;
@@ -45,7 +59,7 @@ export component CrawlsPanel inherits Rectangle {
                     }
                 }
             }
-            
+
             Menu {
                 MenuItem {
                     title: "Delete Crawl";

@@ -1,25 +1,39 @@
-import { VerticalBox, Button, StandardListView } from "std-widgets.slint";
+import {
+    Palette,
+    VerticalBox,
+    Button,
+    StandardListView,
+} from "std-widgets.slint";
 
-export component SitesSidebar inherits VerticalBox {
+export component SitesSidebar inherits Rectangle {
     in property <[StandardListViewItem]> sites;
     in-out property <int> selected-site-index: -1;
     callback add-site-clicked();
     callback site-selected(int);
 
-    width: 200px;
-    spacing: 10px;
+    width: 240px;
+    background: Palette.alternate-background;
 
-    Button {
-        text: "+ Add Site";
-        height: 40px;
-        clicked => {
-            root.add-site-clicked();
+    VerticalBox {
+        padding: 12px;
+        spacing: 12px;
+
+        Text {
+            text: "Sites";
+            font-size: 13px;
         }
-    }
 
-    site-list := StandardListView {
-        model: root.sites;
-        current-item <=> root.selected-site-index;
+        site-list := StandardListView {
+            model: root.sites;
+            current-item <=> root.selected-site-index;
+        }
+
+        Button {
+            text: "New Site";
+            clicked => {
+                root.add-site-clicked();
+            }
+        }
     }
     
     // When selection changes, emit the index

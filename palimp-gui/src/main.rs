@@ -356,7 +356,7 @@ async fn refresh_sites(app: &Application, ui_weak: &Weak<AppWindow>, site_index_
     let _ = ui_weak.upgrade_in_event_loop(move |ui| {
         // Build 1D array with just display text
         let items: Vec<StandardListViewItem> = data.iter()
-            .map(|s| StandardListViewItem::from(SharedString::from(format!("{} #{}", s.domain, s.id))))
+            .map(|s| StandardListViewItem::from(SharedString::from(format!("{} (ID: {})", s.domain, s.id))))
             .collect();
         ui.set_sites(ModelRc::from(Rc::new(VecModel::from(items))));
         
