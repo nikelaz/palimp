@@ -1,0 +1,63 @@
+import { LineEdit, VerticalBox, HorizontalBox, StandardButton } from "std-widgets.slint";
+
+export component AddCrawlDialog inherits Dialog {
+    callback start(string, string); // site_id, concurrency
+    callback cancel-clicked();
+    title: "Start New Crawl";
+    
+    // Initial visibility
+    visible: false;
+
+    public function show() {
+        root.visible = true;
+    }
+
+    public function close() {
+        root.visible = false;
+    }
+
+    property <string> site-id-text;
+    property <string> concurrency-text;
+
+    VerticalBox {
+        spacing: 15px;
+        
+        VerticalBox {
+            spacing: 5px;
+            Text { text: "Site ID:"; color: #333; }
+            site_id_input := LineEdit {
+                placeholder-text: "Enter Site ID";
+                height: 35px;
+                edited => { root.site-id-text = self.text; }
+            }
+        }
+
+        VerticalBox {
+            spacing: 5px;
+            Text { text: "Concurrency:"; color: #333; }
+            concurrency_input := LineEdit {
+                placeholder-text: "Default: 5";
+                text: "5";
+                height: 35px;
+                edited => { root.concurrency-text = self.text; }
+            }
+        }
+    }
+
+    StandardButton {
+        kind: ok;
+        clicked => {
+            root.start(site_id_input.text, concurrency_input.text);
+            site_id_input.text = "";
+            root.close();
+        }
+    }
+
+    StandardButton {
+        kind: cancel;
+        clicked => {
+            root.cancel-clicked();
+            root.close();
+        }
+    }
+}

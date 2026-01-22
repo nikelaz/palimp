@@ -1,0 +1,69 @@
+import {
+    LineEdit,
+    VerticalBox,
+    HorizontalBox,
+    StandardButton,
+    Button,
+} from "std-widgets.slint";
+
+export component AddSiteDialog inherits Dialog {
+    callback add(string, string); // domain, sitemap
+    callback cancel-clicked();
+    title: "Add New Site";
+    
+    // Default size for the dialog window
+    min-width: 400px;
+    min-height: 200px;
+
+    property <string> domain-text;
+    property <string> sitemap-text;
+
+    VerticalBox {
+        spacing: 15px;
+        VerticalBox {
+            spacing: 5px;
+            Text {
+                text: "Domain:";
+            }
+
+            domain_input := LineEdit {
+                placeholder-text: "example.com";
+                height: 35px;
+                edited => {
+                    root.domain-text = self.text;
+                }
+            }
+        }
+
+        VerticalBox {
+            spacing: 5px;
+            Text {
+                text: "Sitemap URL:";
+            }
+
+            sitemap_input := LineEdit {
+                placeholder-text: "https://example.com/sitemap.xml";
+                height: 35px;
+                edited => {
+                    root.sitemap-text = self.text;
+                }
+            }
+        }
+    }
+
+    StandardButton {
+        kind: ok;
+        clicked => {
+            root.add(domain_input.text, sitemap_input.text);
+            domain_input.text = "";
+            sitemap_input.text = "";
+        }
+    }
+
+    StandardButton {
+        kind: cancel;
+        clicked => {
+            root.cancel-clicked();
+        }
+    }
+}

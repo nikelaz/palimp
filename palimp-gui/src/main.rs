@@ -107,6 +107,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // These just forward commands to the logic thread
 
     let tx_clone = tx.clone();
+    ui.on_open_add_site_dialog(move || {
+        let dialog = AddSiteDialog::new().unwrap();
+        let dialog_weak = dialog.as_weak();
+        let tx_clone_inner = tx_clone.clone();
+
+        dialog.on_add(move |domain, sitemap| {
+             let _ = tx_clone_inner.blocking_send(AppCommand::AddSite { 
+                 domain: domain.to_string(), 
+                 sitemap: sitemap.to_string() 
+             });
+             // We can close the dialog here if we want, or let the dialog close itself via button
+             // For a separate window, we might want to hide/close it.
+             // But Slint windows created this way don't automatically have a close method on the rust side unless we use the window handle.
+             // Actually, `dialog` variable is the Window.
+             if let Some(d) = dialog_weak.upgrade() {
+                 let _ = d.hide();
+             }
+        });
+        
+        let dialog_weak = dialog.as_weak();
+        dialog.on_cancel_clicked(move || {
+            if let Some(d) = dialog_weak.upgrade() {
+                let _ = d.hide();
+            }
+        });
+
+        // Show the dialog as a separate window
+        dialog.show().unwrap();
+    });
+
+    let tx_clone = tx.clone();
     ui.on_request_add_site(move |domain, sitemap| {
         let _ = tx_clone.blocking_send(AppCommand::AddSite { 
             domain: domain.to_string(), 
@@ -292,3 +323,4 @@ async fn refresh_results(app: &Application, ui_weak: &Weak<AppWindow>, query_id:
         ui.set_results(ModelRc::from(Rc::new(VecModel::from(items))));
     });
 }
+

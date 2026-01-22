@@ -5,6 +5,9 @@ import { SitesPage } from "pages/sites-page.slint";
 import { CrawlsPage } from "pages/crawls-page.slint";
 import { QueriesPage } from "pages/queries-page.slint";
 import { ResultsPage } from "pages/results-page.slint";
+import { AddSiteDialog } from "components/add-site-dialog.slint";
+
+export { AddSiteDialog }
 
 export component AppWindow inherits Window {
     title: "Palimp GUI";
@@ -23,6 +26,9 @@ export component AppWindow inherits Window {
     callback request_add_query(string, string);
     callback request_delete_query(string);
     callback request_load_results(string);
+    
+    // New callback to signal the Rust backend to open the dialog
+    callback open_add_site_dialog();
 
     // Current active section (0 = Sites, 1 = Crawls, 2 = Queries, 3 = Results)
     property <int> current_section: 0;
@@ -38,8 +44,8 @@ export component AppWindow inherits Window {
             // Sites Page 
             if current_section == 0: SitesPage {
                 sites: root.sites;
-                request_add_site(domain, sitemap) => {
-                    root.request_add_site(domain, sitemap);
+                request_add_site_dialog() => {
+                    root.open_add_site_dialog();
                 }
                 request_delete_site(id) => {
                     root.request_delete_site(id);
