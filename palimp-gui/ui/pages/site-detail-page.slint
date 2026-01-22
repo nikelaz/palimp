@@ -1,0 +1,49 @@
+import { HorizontalBox } from "std-widgets.slint";
+import { CrawlsPanel } from "../components/crawls-panel.slint";
+import { QueryResultsPanel } from "../components/query-results-panel.slint";
+
+export component SiteDetailPage inherits Rectangle {
+    in property <string> site-id;
+    in property <[[StandardListViewItem]]> crawls;
+    in property <[[StandardListViewItem]]> results;
+    
+    property <string> selected-crawl-id: "";
+    
+    callback add-crawl-clicked();
+    callback delete-crawl-clicked(string);
+    callback run-query-clicked(string, string);
+    callback crawl-selected(string);  // Notify parent when crawl is selected
+    
+    HorizontalBox {
+        // Left panel: Crawls (40%)
+        crawls-panel := CrawlsPanel {
+            width: 40%;
+            crawls: root.crawls;
+            
+            add-crawl-clicked => {
+                root.add-crawl-clicked();
+            }
+            
+            delete-crawl-clicked(id) => {
+                root.delete-crawl-clicked(id);
+            }
+            
+            crawl-selected(id) => {
+                root.selected-crawl-id = id;
+                root.crawl-selected(id);  // Notify parent
+            }
+        }
+        
+        // Right panel: Query & Results (60%)
+        query-panel := QueryResultsPanel {
+            width: 60%;
+            has-crawls: crawls.length > 0;
+            selected-crawl-id: root.selected-crawl-id;
+            results: root.results;
+            
+            run-query-clicked(crawl-id, selector) => {
+                root.run-query-clicked(crawl-id, selector);
+            }
+        }
+    }
+}

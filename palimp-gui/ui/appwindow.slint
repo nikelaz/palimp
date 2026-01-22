@@ -1,85 +1,73 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-
-import { SidebarNav } from "components/sidebar-nav.slint";
-import { SitesPage } from "pages/sites-page.slint";
-import { CrawlsPage } from "pages/crawls-page.slint";
-import { QueriesPage } from "pages/queries-page.slint";
-import { ResultsPage } from "pages/results-page.slint";
+import { SitesSidebar } from "components/sites-sidebar.slint";
+import { SiteDetailPage } from "pages/site-detail-page.slint";
 import { AddSiteDialog } from "components/add-site-dialog.slint";
+import { AddCrawlDialog } from "components/add-crawl-dialog.slint";
 
-export { AddSiteDialog }
+export { AddSiteDialog, AddCrawlDialog }
 
 export component AppWindow inherits Window {
     title: "Palimp GUI";
-    width: 800px;
-    height: 600px;
+    min-width: 1000px;
+    min-height: 700px;
 
-    in property <[[StandardListViewItem]]> sites;
+    // Data properties
+    in property <[StandardListViewItem]> sites;  // Changed to 1D array
     in property <[[StandardListViewItem]]> crawls;
-    in property <[[StandardListViewItem]]> queries;
     in property <[[StandardListViewItem]]> results;
 
-    callback request_add_site(string, string);
-    callback request_delete_site(string);
-    callback request_start_crawl(string, string);
-    callback request_delete_crawl(string);
-    callback request_add_query(string, string);
-    callback request_delete_query(string);
-    callback request_load_results(string);
-    
-    // New callback to signal the Rust backend to open the dialog
-    callback open_add_site_dialog();
+    // State properties
+    in-out property <string> selected-site-id: "";
+    in-out property <int> selected-site-index: -1;
+    property <bool> has-sites: sites.length > 0;
 
-    // Current active section (0 = Sites, 1 = Crawls, 2 = Queries, 3 = Results)
-    property <int> current_section: 0;
+    // Callbacks to Rust
+    callback open-add-site-dialog();
+    callback open-add-crawl-dialog(string);  // site_id
+    callback site-selected(int);  // Load crawls for site (now takes index)
+    callback request-add-site(string, string);
+    callback request-start-crawl(string, string);  // site_id, concurrency
+    callback request-delete-crawl(string);
+    callback request-run-query(string, string);  // crawl_id, selector
+    callback crawl-selected(string);  // Notify Rust of crawl selection for caching
 
     HorizontalBox {
-        // Left Sidebar Navigation
-        SidebarNav {
-            current-section <=> root.current_section;
+        // Left: Sites Sidebar
+        sites-sidebar := SitesSidebar {
+            sites: root.sites;
+            selected-site-index <=> root.selected-site-index;
+            add-site-clicked => {
+                root.open-add-site-dialog();
+            }
+            site-selected(index) => {
+                root.site-selected(index);  // Tell Rust to load crawls
+            }
         }
 
-        // Main Content Area
-        VerticalBox { 
-            // Sites Page 
-            if current_section == 0: SitesPage {
-                sites: root.sites;
-                request_add_site_dialog() => {
-                    root.open_add_site_dialog();
-                }
-                request_delete_site(id) => {
-                    root.request_delete_site(id);
-                }
-            }
+        // Right: Main Content Area
+        if !has-sites: Text {
+            text: "Create a site to begin";
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            font-size: 18px;
+            color: #888;
+        }
 
-            // Crawls Page
-            if current_section == 1: CrawlsPage {
-                crawls: root.crawls;
-                request_start_crawl(site_id, concurrency) => {
-                    root.request_start_crawl(site_id, concurrency);
-                }
-                request_delete_crawl(id) => {
-                    root.request_delete_crawl(id);
-                }
+        if has-sites: SiteDetailPage {
+            site-id: root.selected-site-id;
+            crawls: root.crawls;
+            results: root.results;
+            add-crawl-clicked => {
+                root.open-add-crawl-dialog(root.selected-site-id);
             }
-
-            // Queries Page
-            if current_section == 2: QueriesPage {
-                queries: root.queries;
-                request_add_query(crawl_id, selector) => {
-                    root.request_add_query(crawl_id, selector);
-                }
-                request_delete_query(id) => {
-                    root.request_delete_query(id);
-                }
+            delete-crawl-clicked(id) => {
+                root.request-delete-crawl(id);
             }
-
-            // Results Page
-            if current_section == 3: ResultsPage {
-                results: root.results;
-                request_load_results(query_id) => {
-                    root.request_load_results(query_id);
-                }
+            run-query-clicked(crawl-id, selector) => {
+                root.request-run-query(crawl-id, selector);
+            }
+            crawl-selected(id) => {
+                root.crawl-selected(id);
             }
         }
     }

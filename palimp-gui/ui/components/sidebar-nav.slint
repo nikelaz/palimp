@@ -1,8 +1,0 @@
-import { StandardListView } from "std-widgets.slint";
-
-export component SidebarNav inherits StandardListView {
-    in-out property <int> current-section <=> root.current-item;
-    
-    width: 150px;
-    model: [{ text: "Sites" }, { text: "Crawls" }, { text: "Queries" }, { text: "Results" }];
-}

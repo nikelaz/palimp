@@ -1,0 +1,63 @@
+import { VerticalBox, HorizontalBox, LineEdit, Button, StandardTableView } from "std-widgets.slint";
+
+export component QueryResultsPanel inherits Rectangle {
+    in property <bool> has-crawls;
+    in property <string> selected-crawl-id;
+    in property <[[StandardListViewItem]]> results;
+    
+    property <string> css-selector-input: "";
+    
+    callback run-query-clicked(string, string);  // crawl_id, selector
+    
+    VerticalBox {
+        padding: 10px;
+        spacing: 10px;
+        
+        // Empty state when no crawls exist
+        if !has-crawls: Rectangle {
+            Text {
+                text: "Create a crawl to begin";
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                font-size: 16px;
+                color: #888;
+            }
+        }
+        
+        // Query form and results (only when crawls exist)
+        if has-crawls: VerticalBox {
+            spacing: 10px;
+            
+            Text {
+                text: "CSS Selector:";
+                font-size: 14px;
+            }
+            
+            LineEdit {
+                placeholder-text: "div.content a";
+                text <=> root.css-selector-input;
+                height: 35px;
+                enabled: selected-crawl-id != "";
+            }
+            
+            Button {
+                text: "Run Query";
+                height: 40px;
+                enabled: selected-crawl-id != "" && css-selector-input != "";
+                clicked => {
+                    root.run-query-clicked(selected-crawl-id, css-selector-input);
+                }
+            }
+            
+            // Results table (always visible when has-crawls, even if empty)
+            StandardTableView {
+                columns: [
+                    { title: "ID", width: 80px },
+                    { title: "Page URL", width: 400px },
+                    { title: "Count", width: 80px }
+                ];
+                rows: root.results;
+            }
+        }
+    }
+}

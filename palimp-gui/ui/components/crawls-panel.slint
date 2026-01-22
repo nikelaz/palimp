@@ -1,0 +1,61 @@
+import { VerticalBox, HorizontalBox, Button, StandardTableView } from "std-widgets.slint";
+
+export component CrawlsPanel inherits Rectangle {
+    in property <[[StandardListViewItem]]> crawls;
+    in-out property <int> selected-crawl-row: -1;
+    
+    callback add-crawl-clicked();
+    callback delete-crawl-clicked(string);  // crawl_id
+    callback crawl-selected(string);  // crawl_id
+    
+    VerticalBox {
+        padding: 10px;
+        spacing: 10px;
+        
+        HorizontalBox {
+            height: 40px;
+            Button {
+                text: "+ Add Crawl";
+                clicked => { root.add-crawl-clicked(); }
+            }
+        }
+        
+        crawl-context-menu := ContextMenuArea {
+            StandardTableView {
+                columns: [
+                    { title: "ID", width: 80px },
+                    { title: "Started At", width: 200px }
+                ];
+                rows: root.crawls;
+                
+                row-pointer-event(row-index, event, point) => {
+                    if (event.kind == PointerEventKind.down && event.button == PointerEventButton.left) {
+                        root.selected-crawl-row = row-index;
+                        if (row-index >= 0 && row-index < crawls.length) {
+                            root.crawl-selected(crawls[row-index][0].text);
+                        }
+                    }
+                    
+                    if (event.kind == PointerEventKind.down && event.button == PointerEventButton.right) {
+                        crawl-context-menu.close();
+                        root.selected-crawl-row = row-index;
+                    }
+                    if (event.kind == PointerEventKind.up && event.button == PointerEventButton.right) {
+                        crawl-context-menu.show(point);
+                    }
+                }
+            }
+            
+            Menu {
+                MenuItem {
+                    title: "Delete Crawl";
+                    activated => {
+                        if (selected-crawl-row >= 0 && selected-crawl-row < crawls.length) {
+                            root.delete-crawl-clicked(crawls[selected-crawl-row][0].text);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
