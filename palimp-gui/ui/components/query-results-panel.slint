@@ -13,8 +13,8 @@ export component QueryResultsPanel inherits Rectangle {
     property <string> css-selector-input: "";
     callback run-query-clicked(string, string);
     VerticalBox {
-        padding: 12px;
-        spacing: 12px;
+        padding: 15px;
+        spacing: 15px;
 
         Text {
             text: "Query";
@@ -26,6 +26,7 @@ export component QueryResultsPanel inherits Rectangle {
         
         // Empty state when no crawls exist
         if !has-crawls: Rectangle {
+            vertical-stretch: 1;
             Text {
                 text: "Create a crawl to begin";
                 horizontal-alignment: center;
@@ -37,11 +38,11 @@ export component QueryResultsPanel inherits Rectangle {
         // Query form and results (only when crawls exist)
         if has-crawls: VerticalBox {
             padding: 0;
-            spacing: 12px;
+            spacing: 15px;
 
             HorizontalBox {
                 padding: 0;
-                spacing: 12px;
+                spacing: 15px;
 
                 LineEdit {
                     horizontal-stretch: 1;

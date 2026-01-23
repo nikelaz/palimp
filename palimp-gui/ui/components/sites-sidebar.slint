@@ -15,17 +15,22 @@ export component SitesSidebar inherits Rectangle {
     background: Palette.alternate-background;
 
     VerticalBox {
-        padding: 12px;
-        spacing: 12px;
+        padding: 15px;
+        spacing: 15px;
 
-        Text {
-            text: "Sites";
-            font-size: 13px;
-        }
+        VerticalBox {
+            padding: 0;
+            spacing: 10px;
 
-        site-list := StandardListView {
-            model: root.sites;
-            current-item <=> root.selected-site-index;
+            Text {
+                text: "Sites";
+                font-size: 14px;
+            }
+
+            site-list := StandardListView {
+                model: root.sites;
+                current-item <=> root.selected-site-index;
+            }
         }
 
         Button {

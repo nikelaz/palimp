@@ -1,4 +1,4 @@
-import { Palette, HorizontalBox } from "std-widgets.slint";
+import { Palette, VerticalBox, HorizontalBox, Button } from "std-widgets.slint";
 import { CrawlsPanel } from "../components/crawls-panel.slint";
 import { QueryResultsPanel } from "../components/query-results-panel.slint";
 
@@ -6,40 +6,70 @@ export component SiteDetailPage inherits Rectangle {
     in property <string> site-id;
     in property <[[StandardListViewItem]]> crawls;
     in property <[[StandardListViewItem]]> results;
+
     property <string> selected-crawl-id: "";
+
     callback add-crawl-clicked();
     callback delete-crawl-clicked(string);
     callback run-query-clicked(string, string);
     callback crawl-selected(string);
-    HorizontalBox {
-        // Left panel: Crawls
-        crawls-panel := CrawlsPanel {
-            crawls: root.crawls;
-            add-crawl-clicked => {
-                root.add-crawl-clicked();
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 15px;
+        height: 100%;
+
+        HorizontalBox {
+            padding: 0;
+            alignment: start;
+
+            Text {
+              vertical-stretch: 0;
+              vertical-alignment: center;
+              text: "nikolalazarov.com";
+              font-size: 18px;
+              font-weight: 600;
             }
-            delete-crawl-clicked(id) => {
-                root.delete-crawl-clicked(id);
-            }
-            crawl-selected(id) => {
-                root.selected-crawl-id = id;
-                root.crawl-selected(id);
+
+            Button {
+              text: "Site Settings";
             }
         }
 
-        // Vertical Separator
-        Rectangle {
-            width: 1px;
-            background: Palette.border;
-        }
-        
-        // Right panel: Query & Results
-        query-panel := QueryResultsPanel {
-            has-crawls: crawls.length > 0;
-            selected-crawl-id: root.selected-crawl-id;
-            results: root.results;
-            run-query-clicked(crawl-id, selector) => {
-                root.run-query-clicked(crawl-id, selector);
+        HorizontalBox {
+            padding: 0;
+            spacing: 15px;
+            vertical-stretch: 1;
+
+            // Left panel: Crawls
+            crawls-panel := CrawlsPanel {
+                crawls: root.crawls;
+                add-crawl-clicked => {
+                    root.add-crawl-clicked();
+                }
+                delete-crawl-clicked(id) => {
+                    root.delete-crawl-clicked(id);
+                }
+                crawl-selected(id) => {
+                    root.selected-crawl-id = id;
+                    root.crawl-selected(id);
+                }
+            }
+
+            // Vertical Separator
+            Rectangle {
+                width: 1px;
+                background: Palette.border;
+            }
+            
+            // Right panel: Query & Results
+            query-panel := QueryResultsPanel {
+                has-crawls: crawls.length > 0;
+                selected-crawl-id: root.selected-crawl-id;
+                results: root.results;
+                run-query-clicked(crawl-id, selector) => {
+                    root.run-query-clicked(crawl-id, selector);
+                }
             }
         }
     }
