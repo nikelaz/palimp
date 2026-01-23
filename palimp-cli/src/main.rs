@@ -130,6 +130,9 @@ async fn handle_crawls(app: &Application, args: &[String]) -> Result<(), Box<dyn
             
             app.new_crawl(site_id, max_concurrent, |result| {
                 match result {
+                    CrawlResult::CrawlStarted(total) => {
+                        println!("Crawling {} pages...", total);
+                    }
                     CrawlResult::PageSucceeded(url) => println!("  [OK] {}", url),
                     CrawlResult::PageFailed(url, err) => eprintln!("  [ERR] {}: {}", url, err),
                 }

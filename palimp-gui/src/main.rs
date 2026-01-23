@@ -117,6 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Starting crawl for site {}...", site_id);
                         let result = app.new_crawl(site_id, concurrency, |res| {
                              match res {
+                                CrawlResult::CrawlStarted(total) => println!("Crawling {} pages...", total),
                                 CrawlResult::PageSucceeded(url) => println!("  [OK] {}", url),
                                 CrawlResult::PageFailed(url, err) => eprintln!("  [ERR] {}: {}", url, err),
                             }
@@ -238,20 +239,121 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Open Add Crawl Dialog
     let tx_clone = tx.clone();
+    let ui_weak_clone_for_crawl = ui_weak.clone();
     ui.on_open_add_crawl_dialog(move |site_id_str| {
         let dialog = AddCrawlDialog::new().unwrap();
         let dialog_weak = dialog.as_weak();
-        let tx_clone_inner = tx_clone.clone();
+        let _tx_clone_inner = tx_clone.clone();
         let site_id_str_clone = site_id_str.to_string();
+        let ui_weak_for_crawl = ui_weak_clone_for_crawl.clone();
 
         dialog.on_start(move |_, concurrency_str| {
             if let Ok(site_id) = site_id_str_clone.parse::<i64>() {
                 let concurrency = concurrency_str.parse::<usize>().unwrap_or(5);
-                let _ = tx_clone_inner.blocking_send(AppCommand::StartCrawl { site_id, concurrency });
-            }
-            
-            if let Some(d) = dialog_weak.upgrade() {
-                let _ = d.hide();
+                let dialog_weak_inner = dialog_weak.clone();
+                let ui_weak_inner = ui_weak_for_crawl.clone();
+                
+                // Spawn the crawl in a background thread
+                std::thread::spawn(move || {
+                    let runtime = tokio::runtime::Runtime::new().unwrap();
+                    runtime.block_on(async {
+                        let app = match Application::new("palimp.db") {
+                            Ok(app) => app,
+                            Err(e) => {
+                                eprintln!("Failed to create application: {}", e);
+                                return;
+                            }
+                        };
+                        
+                        let total_pages = Arc::new(Mutex::new(0_usize));
+                        let processed_pages = Arc::new(Mutex::new(0_usize));
+                        let logs = Arc::new(Mutex::new(String::new()));
+                        
+                        let total_clone = Arc::clone(&total_pages);
+                        let processed_clone = Arc::clone(&processed_pages);
+                        let logs_clone = Arc::clone(&logs);
+                        let dialog_weak_clone = dialog_weak_inner.clone();
+                        
+                        let _result = app.new_crawl(site_id, concurrency, move |res| {
+                            match res {
+                                CrawlResult::CrawlStarted(total) => {
+                                    *total_clone.lock().unwrap() = total;
+                                    let log_entry = format!("Starting crawl of {} pages...\n", total);
+                                    let mut log_text = logs_clone.lock().unwrap();
+                                    log_text.push_str(&log_entry);
+                                    
+                                    let log_display = log_text.clone();
+                                    let dialog_weak_update = dialog_weak_clone.clone();
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(d) = dialog_weak_update.upgrade() {
+                                            d.set_log_text(SharedString::from(log_display));
+                                        }
+                                    });
+                                }
+                                CrawlResult::PageSucceeded(url) => {
+                                    let mut processed = processed_clone.lock().unwrap();
+                                    *processed += 1;
+                                    let total = *total_clone.lock().unwrap();
+                                    
+                                    let log_entry = format!("[OK] {}\n", url);
+                                    let mut log_text = logs_clone.lock().unwrap();
+                                    log_text.push_str(&log_entry);
+                                    
+                                    let log_display = log_text.clone();
+                                    let progress = if total > 0 {
+                                        *processed as f32 / total as f32
+                                    } else {
+                                        0.0
+                                    };
+                                    
+                                    let dialog_weak_update = dialog_weak_clone.clone();
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(d) = dialog_weak_update.upgrade() {
+                                            d.set_log_text(SharedString::from(log_display));
+                                            d.set_progress(progress);
+                                        }
+                                    });
+                                }
+                                CrawlResult::PageFailed(url, err) => {
+                                    let mut processed = processed_clone.lock().unwrap();
+                                    *processed += 1;
+                                    let total = *total_clone.lock().unwrap();
+                                    
+                                    let log_entry = format!("[ERR] {}: {}\n", url, err);
+                                    let mut log_text = logs_clone.lock().unwrap();
+                                    log_text.push_str(&log_entry);
+                                    
+                                    let log_display = log_text.clone();
+                                    let progress = if total > 0 {
+                                        *processed as f32 / total as f32
+                                    } else {
+                                        0.0
+                                    };
+                                    
+                                    let dialog_weak_update = dialog_weak_clone.clone();
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(d) = dialog_weak_update.upgrade() {
+                                            d.set_log_text(SharedString::from(log_display));
+                                            d.set_progress(progress);
+                                        }
+                                    });
+                                }
+                            }
+                        }).await;
+                        
+                        // Crawl completed
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(d) = dialog_weak_inner.upgrade() {
+                                d.set_is_crawling(false);
+                                d.set_crawl_completed(true);
+                                d.set_progress(1.0);
+                            }
+                        });
+                        
+                        // Refresh crawls list
+                        refresh_crawls_for_site(&app, &ui_weak_inner, site_id).await;
+                    });
+                });
             }
         });
         

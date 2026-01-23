@@ -167,6 +167,7 @@ async fn delete_result(result_id: i64, db: &Database) -> Result<(), Box<dyn Erro
 }
 
 pub enum CrawlResult {
+    CrawlStarted(usize),  // Total number of pages to crawl
     PageSucceeded(String),
     PageFailed(String, String),
 }
@@ -199,6 +200,10 @@ where
     };
 
     let on_update = Arc::new(on_update);
+    
+    // Notify about total page count before starting
+    let total_pages = sitemap.urlset.urls.len();
+    on_update(CrawlResult::CrawlStarted(total_pages));
 
     stream::iter(sitemap.urlset.urls)
         .for_each_concurrent(max_concurrent, |url_entry| {

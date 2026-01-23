@@ -1,42 +1,95 @@
-import { LineEdit, VerticalBox, StandardButton } from "std-widgets.slint";
+import { LineEdit, VerticalBox, HorizontalBox, StandardButton, Button, ScrollView, ProgressIndicator } from "std-widgets.slint";
 
 export component AddCrawlDialog inherits Dialog {
     callback start(string, string); // site_id (passed from Rust), concurrency
     callback cancel-clicked();
     title: "Start New Crawl";
     
-    min-width: 400px;
-    min-height: 150px;
+    in-out property <string> log-text: "";
+    in-out property <float> progress: 0.0;
+    in-out property <bool> is-crawling: false;
+    in-out property <bool> crawl-completed: false;
+    in-out property <string> concurrency-value: "5";
 
-    property <string> concurrency-text;
+    min-width: 600px;
+    min-height: 400px;
 
     VerticalBox {
         spacing: 15px;
 
-        VerticalBox {
+        // Configuration section (only visible before crawl starts)
+        if !is-crawling && !crawl-completed: VerticalBox {
             spacing: 5px;
             Text { text: "Concurrency:"; }
-            concurrency_input := LineEdit {
+            LineEdit {
                 placeholder-text: "Default: 5";
-                text: "5";
+                text <=> root.concurrency-value;
                 height: 35px;
-                edited => { root.concurrency-text = self.text; }
             }
         }
-    }
 
-    StandardButton {
-        kind: ok;
-        clicked => {
-            root.start("", concurrency_input.text);  // First param handled in Rust
-            concurrency_input.text = "5";
+        // Progress section (visible during and after crawl)
+        if is-crawling || crawl-completed: VerticalBox {
+            spacing: 10px;
+            
+            // Progress bar
+            ProgressIndicator {
+                progress: progress;     
+            }
+            
+            // Status text
+            Text {
+                text: is-crawling ? "Crawl in progress..." : "Crawl completed!";
+                font-size: 14px;
+                font-weight: 600;
+            }
+            
+            // Logs section
+            Text {
+                text: "Logs:";
+                font-size: 12px;
+            }
+            
+            Rectangle {
+                vertical-stretch: 1;
+                
+                ScrollView {
+                    log-container := VerticalBox {
+                        padding: 10px;
+                        
+                        Text {
+                            text: root.log-text;
+                            font-family: "monospace";
+                            font-size: 11px;
+                            wrap: word-wrap;
+                            vertical-alignment: top;
+                        }
+                    }
+                }
+            }
         }
-    }
-
-    StandardButton {
-        kind: cancel;
-        clicked => {
-            root.cancel-clicked();
+        
+        // Buttons area
+        HorizontalBox {
+            alignment: end;
+            spacing: 10px;
+            
+            Button {
+                text: "Start Crawl";
+                visible: !is-crawling && !crawl-completed;
+                clicked => {
+                    root.is-crawling = true;
+                    root.start("", root.concurrency-value);
+                }
+            }
+            
+            Button {
+                text: "Close";
+                enabled: !is-crawling || crawl-completed;
+                clicked => {
+                    root.cancel-clicked();
+                }
+            }
         }
     }
 }
