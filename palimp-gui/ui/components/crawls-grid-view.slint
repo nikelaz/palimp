@@ -1,0 +1,99 @@
+import { VerticalBox, HorizontalBox, Button, ScrollView } from "std-widgets.slint";
+import { CrawlCard } from "../components/crawl-card.slint";
+
+export component CrawlsGridView inherits Rectangle {
+    in property <[[StandardListViewItem]]> crawls;
+    
+    callback crawl-clicked(string);
+    callback add-crawl-clicked();
+    callback delete-crawl-clicked(string);
+    
+    VerticalBox {
+        padding: 0;
+        spacing: 20px;
+        
+        // Header with title and New Crawl button
+        HorizontalBox {
+            vertical-stretch: 0;
+            padding: 0;
+            spacing: 15px;
+            alignment: space-between;
+            
+            Text {
+                text: "Crawls";
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            
+            Button {
+                text: "New Crawl";
+                clicked => {
+                    root.add-crawl-clicked();
+                }
+            }
+        }
+        
+        // Empty state when no crawls exist
+        if crawls.length == 0: Rectangle {
+            vertical-stretch: 1;
+            
+            VerticalBox {
+                alignment: center;
+                spacing: 20px;
+                
+                Text {
+                    text: "No crawls yet";
+                    font-size: 18px;
+                    color: #888888;
+                    horizontal-alignment: center;
+                }
+                
+                Button {
+                    text: "Create Your First Crawl";
+                    clicked => {
+                        root.add-crawl-clicked();
+                    }
+                }
+            }
+        }
+        
+        // Grid of crawl cards
+        if crawls.length > 0: ScrollView {
+            vertical-stretch: 1;
+                    
+            VerticalBox {
+                padding: 0;
+                spacing: 15px;
+                alignment: start;
+                
+                // Dynamically create rows of cards
+                for row-index in Math.ceil(crawls.length / 3): HorizontalBox {
+                    padding: 0;
+                    spacing: 15px;
+                    alignment: start;
+                    
+                    // Create up to 3 cards per row
+                    for col-index in 3: Rectangle {
+                        width: 250px;
+                        height: 100px;
+                        
+                        property <int> crawl-index: row-index * 3 + col-index;
+                        visible: crawl-index < crawls.length;
+                        
+                        if crawl-index < crawls.length: CrawlCard {
+                            crawl-id: crawls[crawl-index][0].text;
+                            crawl-date: crawls[crawl-index][1].text;
+                            clicked => {
+                                root.crawl-clicked(crawls[crawl-index][0].text);
+                            }
+                            delete-clicked => {
+                                root.delete-crawl-clicked(crawls[crawl-index][0].text);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,50 @@
+import { VerticalBox, HorizontalBox, Button } from "std-widgets.slint";
+import { QueryResultsPanel } from "../components/query-results-panel.slint";
+
+export component QueryView inherits Rectangle {
+    in property <string> selected-crawl-id;
+    in property <[[StandardListViewItem]]> results;
+    
+    callback back-clicked();
+    callback run-query-clicked(string, string);
+    callback export-csv-clicked();
+    
+    VerticalBox {
+        padding: 0;
+        spacing: 20px;
+        
+        // Header with back button
+        HorizontalBox {
+            padding: 0;
+            spacing: 15px;
+            alignment: start;
+            
+            Button {
+                text: "← Back";
+                clicked => {
+                    root.back-clicked();
+                }
+            }
+            
+            Text {
+                text: "Crawls";
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+        
+        // Query panel
+        QueryResultsPanel {
+            vertical-stretch: 1;
+            selected-crawl-id: root.selected-crawl-id;
+            results: root.results;
+            run-query-clicked(crawl-id, selector) => {
+                root.run-query-clicked(crawl-id, selector);
+            }
+            export-csv-clicked => {
+                root.export-csv-clicked();
+            }
+        }
+    }
+}

@@ -30,9 +30,11 @@ export component AppWindow inherits Window {
     callback request-delete-crawl(string);
     callback request-run-query(string, string);  // crawl_id, selector
     callback crawl-selected(string);  // Notify Rust of crawl selection for caching
+    callback request-export-csv();
 
     HorizontalBox {
         padding: 0;
+
         // Left: Sites Sidebar
         sites-sidebar := SitesSidebar {
             sites: root.sites;
@@ -42,7 +44,7 @@ export component AppWindow inherits Window {
             }
             site-selected(index) => {
                 root.site-selected(index);  // Tell Rust to load crawls
-              }
+            }
         }
 
         // Right: Main Content Area
@@ -69,6 +71,9 @@ export component AppWindow inherits Window {
             }
             crawl-selected(id) => {
                 root.crawl-selected(id);
+            }
+            export-csv-clicked => {
+                root.request-export-csv();
             }
         }
     }

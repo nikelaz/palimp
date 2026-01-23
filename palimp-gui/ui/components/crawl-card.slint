@@ -1,0 +1,63 @@
+import { VerticalBox } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
+
+export component CrawlCard inherits Rectangle {
+    in property <string> crawl-id;
+    in property <string> crawl-date;
+    
+    callback clicked();
+    callback delete-clicked();
+    
+    width: 250px;
+    height: 100px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: card-touch.has-hover ? Palette.accent-background : Palette.border;
+    background: Palette.background;
+    
+    // Hover shadow effect
+    drop-shadow-blur: card-touch.has-hover ? 8px : 2px;
+    drop-shadow-color: card-touch.has-hover ? #00000030 : #00000010;
+    drop-shadow-offset-y: card-touch.has-hover ? 4px : 2px;
+    
+    animate drop-shadow-blur { duration: 150ms; }
+    animate drop-shadow-offset-y { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+    
+    card-context-menu := ContextMenuArea {
+        VerticalBox {
+            padding: 20px;
+            spacing: 8px;
+            alignment: start;
+            
+            Text {
+                text: "Crawl #" + crawl-id;
+                font-size: 16px;
+                font-weight: 600;
+                color: Palette.foreground;
+            }
+            
+            Text {
+                text: crawl-date;
+                font-size: 14px;
+                color: #888888;
+            }
+        }
+        
+        card-touch := TouchArea {
+            clicked => {
+                root.clicked();
+            }
+            mouse-cursor: pointer;
+        }
+        
+        Menu {
+            MenuItem {
+                title: "Delete Crawl";
+                activated => {
+                    root.delete-clicked();
+                }
+            }
+        }
+    }
+}

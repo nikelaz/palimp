@@ -1,5 +1,5 @@
 use palimp_core::{Application, CrawlResult};
-use slint::{ModelRc, SharedString, StandardListViewItem, VecModel, Weak};
+use slint::{Model, ModelRc, SharedString, StandardListViewItem, VecModel, Weak};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -286,7 +286,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Crawl selected - restore cached results and remember selection per site
     let results_cache_clone = Arc::clone(&results_cache);
-    let selected_crawl_cache_clone = Arc::clone(&selected_crawl_cache);
+    let _selected_crawl_cache_clone = Arc::clone(&selected_crawl_cache);
     let ui_weak_clone = ui_weak.clone();
     ui.on_crawl_selected(move |crawl_id_str| {
         if let Ok(crawl_id) = crawl_id_str.parse::<i64>() {
@@ -320,6 +320,76 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Note: We'd need to track current site_id. For simplicity, we'll store it globally for now.
             // This is a simplification - in a real app, we'd track site_id -> crawl_id mapping
         }
+    });
+
+    // Export CSV
+    let _results_cache_clone = Arc::clone(&results_cache);
+    let ui_weak_clone = ui_weak.clone();
+    ui.on_request_export_csv(move || {
+        // Get current results from UI
+        let ui_weak_inner = ui_weak_clone.clone();
+        
+        slint::spawn_local(async move {
+            if let Some(ui) = ui_weak_inner.upgrade() {
+                let results_model = ui.get_results();
+                
+                // Convert results to Vec
+                let mut results_data = Vec::new();
+                for i in 0..results_model.row_count() {
+                    let row = results_model.row_data(i).unwrap();
+                    if row.row_count() >= 3 {
+                        results_data.push((
+                            row.row_data(0).unwrap().text.to_string(),
+                            row.row_data(1).unwrap().text.to_string(),
+                            row.row_data(2).unwrap().text.to_string(),
+                        ));
+                    }
+                }
+                
+                if results_data.is_empty() {
+                    println!("No results to export");
+                    return;
+                }
+                
+                // Use rfd to show save dialog
+                let file_path = rfd::FileDialog::new()
+                    .add_filter("CSV", &["csv"])
+                    .set_file_name("query_results.csv")
+                    .save_file();
+                    
+                if let Some(path) = file_path {
+                    match std::fs::File::create(&path) {
+                        Ok(file) => {
+                            let mut wtr = csv::Writer::from_writer(file);
+                            
+                            // Write header
+                            if let Err(e) = wtr.write_record(&["ID", "Page URL", "Count"]) {
+                                eprintln!("Error writing CSV header: {}", e);
+                                return;
+                            }
+                            
+                            // Write data
+                            for (id, url, count) in results_data {
+                                if let Err(e) = wtr.write_record(&[id, url, count]) {
+                                    eprintln!("Error writing CSV row: {}", e);
+                                    return;
+                                }
+                            }
+                            
+                            if let Err(e) = wtr.flush() {
+                                eprintln!("Error flushing CSV: {}", e);
+                                return;
+                            }
+                            
+                            println!("Successfully exported results to: {}", path.display());
+                        }
+                        Err(e) => {
+                            eprintln!("Error creating file: {}", e);
+                        }
+                    }
+                }
+            }
+        }).unwrap();
     });
 
     ui.run()?;

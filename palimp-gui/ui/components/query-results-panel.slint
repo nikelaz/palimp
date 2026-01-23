@@ -7,65 +7,50 @@ import {
 } from "std-widgets.slint";
 
 export component QueryResultsPanel inherits Rectangle {
-    in property <bool> has-crawls;
     in property <string> selected-crawl-id;
     in property <[[StandardListViewItem]]> results;
     property <string> css-selector-input: "";
     callback run-query-clicked(string, string);
+    callback export-csv-clicked();
+    
     VerticalBox {
-        padding: 15px;
+        padding: 0;
         spacing: 15px;
 
-        Text {
-            text: "Query";
-            font-size: 16px;
-            font-weight: 600;
-            vertical-alignment: center;
-            min-height: 36px;
-        }
-        
-        // Empty state when no crawls exist
-        if !has-crawls: Rectangle {
-            vertical-stretch: 1;
-            Text {
-                text: "Create a crawl to begin";
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                font-size: 16px;
-            }
-        }
-        
-        // Query form and results (only when crawls exist)
-        if has-crawls: VerticalBox {
+        HorizontalBox {
             padding: 0;
             spacing: 15px;
 
-            HorizontalBox {
-                padding: 0;
-                spacing: 15px;
+            LineEdit {
+                horizontal-stretch: 1;
+                placeholder-text: "CSS Selector (eg. div.content a)";
+                text <=> root.css-selector-input;
+                enabled: selected-crawl-id != "";
+            }
 
-                LineEdit {
-                    horizontal-stretch: 1;
-                    placeholder-text: "CSS Selector (eg. div.content a)";
-                    text <=> root.css-selector-input;
-                    enabled: selected-crawl-id != "";
-                }
-
-                Button {
-                    text: "Run Query";
-                    enabled: selected-crawl-id != "" && css-selector-input != "";
-                    clicked => {
-                        root.run-query-clicked(selected-crawl-id, css-selector-input);
-                    }
+            Button {
+                text: "Run Query";
+                enabled: selected-crawl-id != "" && css-selector-input != "";
+                clicked => {
+                    root.run-query-clicked(selected-crawl-id, css-selector-input);
                 }
             }
             
-            // Results table (always visible when has-crawls, even if empty)
-            StandardTableView {
-                horizontal-stretch: 1;
-                columns: [{ title: "ID", width: 80px }, { title: "Page URL" }, { title: "Count", width: 80px }];
-                rows: root.results;
+            Button {
+                text: "Export CSV";
+                enabled: results.length > 0;
+                clicked => {
+                    root.export-csv-clicked();
+                }
             }
+        }
+        
+        // Results table
+        StandardTableView {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            columns: [{ title: "ID", width: 80px }, { title: "Page URL" }, { title: "Count", width: 80px }];
+            rows: root.results;
         }
     }
 }
