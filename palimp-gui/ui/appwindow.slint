@@ -19,6 +19,7 @@ export component AppWindow inherits Window {
     // State properties
     in-out property <string> selected-site-id: "";
     in-out property <int> selected-site-index: -1;
+    in-out property <bool> query-loading: false;
     property <bool> has-sites: sites.length > 0;
 
     // Callbacks to Rust
@@ -60,6 +61,7 @@ export component AppWindow inherits Window {
             site-id: root.selected-site-id;
             crawls: root.crawls;
             results: root.results;
+            query-loading: root.query-loading;
             add-crawl-clicked => {
                 root.open-add-crawl-dialog(root.selected-site-id);
             }

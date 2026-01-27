@@ -6,6 +6,7 @@ export component SiteDetailPage inherits Rectangle {
     in property <string> site-id;
     in property <[[StandardListViewItem]]> crawls;
     in property <[[StandardListViewItem]]> results;
+    in property <bool> query-loading: false;
 
     property <string> selected-crawl-id: "";
     in-out property <int> current-view: 0;  // 0 = crawls grid, 1 = query view
@@ -62,6 +63,7 @@ export component SiteDetailPage inherits Rectangle {
             vertical-stretch: 1;
             selected-crawl-id: root.selected-crawl-id;
             results: root.results;
+            is-loading: root.query-loading;
             back-clicked => {
                 root.current-view = 0;
             }

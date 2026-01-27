@@ -4,11 +4,13 @@ import {
     LineEdit,
     Button,
     StandardTableView,
+    Spinner,
 } from "std-widgets.slint";
 
 export component QueryResultsPanel inherits Rectangle {
     in property <string> selected-crawl-id;
     in property <[[StandardListViewItem]]> results;
+    in property <bool> is-loading: false;
     property <string> css-selector-input: "";
     callback run-query-clicked(string, string);
     callback export-csv-clicked();
@@ -29,8 +31,8 @@ export component QueryResultsPanel inherits Rectangle {
             }
 
             Button {
-                text: "Run Query";
-                enabled: selected-crawl-id != "" && css-selector-input != "";
+                text: is-loading ? "Running..." : "Run Query";
+                enabled: selected-crawl-id != "" && css-selector-input != "" && !is-loading;
                 clicked => {
                     root.run-query-clicked(selected-crawl-id, css-selector-input);
                 }
@@ -45,8 +47,19 @@ export component QueryResultsPanel inherits Rectangle {
             }
         }
         
+        // Loading spinner
+        if is-loading: HorizontalBox {
+            alignment: center;
+            vertical-stretch: 1;
+            Spinner {
+                indeterminate: true;
+                width: 48px;
+                height: 48px;
+            }
+        }
+        
         // Results table
-        StandardTableView {
+        if !is-loading: StandardTableView {
             horizontal-stretch: 1;
             vertical-stretch: 1;
             columns: [{ title: "ID", width: 80px }, { title: "Page URL" }, { title: "Count", width: 80px }];

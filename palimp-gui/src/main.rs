@@ -147,6 +147,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     AppCommand::RunQuery { crawl_id, selector } => {
                         if let Err(e) = app.query(crawl_id, &selector).await {
                             eprintln!("Error running query: {}", e);
+                            // Clear loading state on error
+                            let _ = ui_weak_for_thread.upgrade_in_event_loop(|ui| {
+                                ui.set_query_loading(false);
+                            });
                             return;
                         }
                         
@@ -171,7 +175,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     cache.insert(crawl_id, data.clone());
                                 }
                                 
-                                // Update UI
+                                // Update UI and clear loading state
                                 let _ = ui_weak_for_thread.upgrade_in_event_loop(move |ui| {
                                     let mut items = Vec::new();
                                     for r in data {
@@ -183,8 +187,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         items.push(ModelRc::from(row));
                                     }
                                     ui.set_results(ModelRc::from(Rc::new(VecModel::from(items))));
+                                    ui.set_query_loading(false);
+                                });
+                            } else {
+                                // No query_id found, clear loading state
+                                let _ = ui_weak_for_thread.upgrade_in_event_loop(|ui| {
+                                    ui.set_query_loading(false);
                                 });
                             }
+                        } else {
+                            // No query found, clear loading state
+                            let _ = ui_weak_for_thread.upgrade_in_event_loop(|ui| {
+                                ui.set_query_loading(false);
+                            });
                         }
                     }
                     AppCommand::RefreshAll => {
@@ -377,7 +392,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run query
     let tx_clone = tx.clone();
+    let ui_weak_for_query = ui_weak.clone();
     ui.on_request_run_query(move |crawl_id_str, selector| {
+        // Set loading state immediately on UI thread
+        if let Some(ui) = ui_weak_for_query.upgrade() {
+            ui.set_query_loading(true);
+        }
+        
         if let Ok(crawl_id) = crawl_id_str.parse::<i64>() {
             let _ = tx_clone.blocking_send(AppCommand::RunQuery { 
                 crawl_id, 
